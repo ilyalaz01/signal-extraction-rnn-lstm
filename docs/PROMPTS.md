@@ -310,3 +310,22 @@ T-MD-10 PRD spec is `SGD lr=1e-2 / 200 steps / MSE < 1e-3`.  With the spec-corre
 **Final M3 state:** 108 tests pass, ruff clean, coverage 100% on all 17 in-scope modules (366/366 stmts). Coverage `omit` only retains `*/services/{evaluation,training}.py` (M4).
 
 **Technique noted:** When a TDD cycle calibrates more than one numeric in a PRD-prescribed test (here 200 → 2000 → 5000 steps across three tests), keep the calibration *uniform per architecture family* (FC and RNN at 2000; LSTM at 5000) — that way the structure of the test set still tells the story the PRD intended (LSTM is slower under SGD), even if the absolute numbers shift.
+
+---
+
+## Session 10 — M4a: training service (Adam, early stop, ADR-014 layout)
+
+**Date:** 2026-05-02
+**Goal:** Land `services/training.py` GREEN with all T-TR unit tests; extend `shared/config.py` with `apply_overrides`; extend `shared/seeding.py` to a 3-tuple (corpus, sampling, dataloader).
+
+**Calibration / spec deviation:**
+T-TR-02 PRD spec writes "full-batch SGD"; the training service is **Adam-only** by design (PRD § 4.1 enforces `optimizer == "adam"`). Resolution: use Adam (the actual configured optimizer); the smoke intent — "loss drops ≥ 50% on a 4-example mini-set after 50 epochs" — is preserved. The PRD's "SGD" phrasing was lifted from the trainability smokes in PRD_models.md without re-checking against the optimizer surface enforced here. Initial dataset size in my draft was 200 (carried over from `small_splits` fixture); under heavy phase noise (β=2π) that was too noisy for a pure trainability smoke. Reverted to 4 examples per the PRD.
+
+**Outputs:**
+- `services/training.py` (128 code-LOC, hard 140) — TrainingConfig, EpochResult, TrainingResult, parse_training_config, _early_stop_index, train.
+- `shared/seeding.py` — `derive_seeds(seed) → (corpus, sampling, dataloader)`. SDK and `test_seeding.py` updated for the 3-tuple.
+- `shared/config.py` — `apply_overrides(cfg, overrides)` deep-merge with KeyError on unknown paths.
+- `tests/unit/test_training.py` (144 code-LOC) — 11 tests covering T-TR-01..08, T-TR-11, plus three extra tests for the NaN guard, the unknown-class guard, and the early-stop break.
+- `tests/unit/test_config.py` extended with three apply_overrides tests (T-TR-09).
+
+**Final state at end of M4a:** 127 tests pass, ruff clean, coverage 100% on all 18 in-scope modules (493/493 stmts).

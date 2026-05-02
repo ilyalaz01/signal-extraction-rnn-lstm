@@ -42,9 +42,9 @@ def test_derive_seeds_distinct_for_distinct_input() -> None:
     assert derive_seeds(42) != derive_seeds(43)
 
 
-def test_derive_seeds_pair_components_differ() -> None:
-    cs, ss = derive_seeds(42)
-    assert cs != ss
+def test_derive_seeds_returns_three_distinct_ints() -> None:
+    cs, ss, ds = derive_seeds(42)
+    assert len({cs, ss, ds}) == 3
 
 
 def test_derive_seeds_rejects_none() -> None:

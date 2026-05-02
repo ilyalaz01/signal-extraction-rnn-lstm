@@ -51,8 +51,7 @@ omit = [
     "*/scripts/*",
     # Stub modules awaiting their milestone — re-include each one when it
     # ships GREEN.  See docs/TODO.md for the milestone map.
-    "*/services/evaluation.py",                # M4
-    "*/services/training.py",                  # M4
+    "*/services/evaluation.py",                # M4b
 ]
 
 [tool.coverage.report]

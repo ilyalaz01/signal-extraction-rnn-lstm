@@ -50,7 +50,7 @@ class SDK:
         device_str = device if device is not None else cfg["runtime"]["device"]
         self.device = resolve_device(device_str)
         seed_everything(self.seed)
-        self._corpus_seed, self._sampling_seed = derive_seeds(self.seed)
+        self._corpus_seed, self._sampling_seed, self._dataloader_seed = derive_seeds(self.seed)
         self._signal_config = parse_signal_config(cfg["signal"])
         self._dataset_config = parse_dataset_config(cfg["dataset"])
 

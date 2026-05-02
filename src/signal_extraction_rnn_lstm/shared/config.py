@@ -4,17 +4,20 @@ Loads and validates ``config/setup.json``; parses angle-expression strings;
 enforces schema version compatibility. See PLAN.md § 9.
 
 Public surface:
-    load_config(config_path) → dict
-    parse_angle(expr)        → float
-    ConfigVersionMismatchError    (exception)
+    load_config(config_path)       → dict
+    parse_angle(expr)              → float
+    apply_overrides(cfg, overrides)→ dict   (deep-merge, dotted-path keys)
+    ConfigVersionMismatchError     (exception)
 """
 
 from __future__ import annotations
 
+import copy
 import json
 import math
 import re
 from pathlib import Path
+from typing import Any
 
 _EXPECTED_VERSION = "1.00"
 _ANGLE_SAFE_RE = re.compile(r"^[\d.\*\/\+\-\(\)\s]+$")
@@ -85,3 +88,26 @@ def load_config(config_path: Path | str | None = None) -> dict:
             f"config version {version!r} != expected {_EXPECTED_VERSION!r}"
         )
     return cfg
+
+
+def apply_overrides(cfg: dict, overrides: dict[str, Any]) -> dict:
+    """Deep-merge dotted-path overrides into ``cfg``.
+
+    ``overrides`` keys are dotted paths like ``"signal.noise.alpha"``; values
+    replace the leaf at that path.  Unknown paths raise ``KeyError`` immediately
+    (fail-fast — almost always a typo).  The original ``cfg`` is left intact;
+    the merged result is returned as a deep copy.
+    """
+    out = copy.deepcopy(cfg)
+    for path, value in overrides.items():
+        keys = path.split(".")
+        node: Any = out
+        for k in keys[:-1]:
+            if not isinstance(node, dict) or k not in node:
+                raise KeyError(f"override path not found: {path!r}")
+            node = node[k]
+        leaf = keys[-1]
+        if not isinstance(node, dict) or leaf not in node:
+            raise KeyError(f"override path not found: {path!r}")
+        node[leaf] = value
+    return out

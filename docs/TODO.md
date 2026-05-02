@@ -2,7 +2,7 @@
 
 > **Last updated:** 2026-05-02
 > **Owner:** Student (all tasks unless noted).
-> **Milestone status:** M0 complete. M1 complete. M2 complete (2026-05-02). M3 complete (2026-05-02). M4 next.
+> **Milestone status:** M0 complete. M1 complete. M2 complete. M3 complete. M4 in progress (M4a complete).
 >
 > This is the live task board. Update checkbox state as each item completes. Add sub-items inline when a task spawns unforeseen work. Do not delete completed items — history is useful for the PROMPTS log and grader.
 
@@ -161,16 +161,29 @@ All code-facing files are blocked until every item in M0 is checked and the user
 
 *Prerequisite: M3 complete.*
 
-- [ ] RED: write `tests/unit/test_training.py` (T-TR-* from PRD_training_evaluation.md)
-- [ ] RED: write `tests/unit/test_evaluation.py` (T-EV-* from PRD_training_evaluation.md)
-- [ ] GREEN: implement `services/training.py`
-- [ ] GREEN: implement `services/evaluation.py`
-- [ ] REFACTOR: `ruff check` clean; training.py ≤ 140 LOC, evaluation.py ≤ 130 LOC
-- [ ] Wire `SDK.train()`, `SDK.evaluate()`, `SDK.run_experiment()` to services
-- [ ] `scripts/train.py` and `scripts/run_experiment.py` thin wrappers
-- [ ] Integration smoke: 1 epoch of each model kind on a tiny corpus, metrics returned, checkpoint saved
-- [ ] `tests/integration/test_reproducibility.py`: same seed → identical loss values
-- [ ] Coverage ≥ 85% overall
+### M4a — training service ✓ complete (2026-05-02)
+
+- [x] RED→GREEN: `tests/unit/test_training.py` (T-TR-01..08, T-TR-11 + extra coverage)
+- [x] GREEN: `services/training.py` (TrainingConfig, EpochResult, TrainingResult, parse_training_config, _early_stop_index, train) — 128 code-LOC (target ~115, hard 140)
+- [x] GREEN: `shared/config.py` extended with `apply_overrides(cfg, overrides)`; T-TR-09 lives in `tests/unit/test_config.py`
+- [x] GREEN: `shared/seeding.py` `derive_seeds` extended to 3-tuple `(corpus, sampling, dataloader)` per PRD_training_evaluation § 5.2; SDK + tests updated
+- [x] T-TR-02 calibration: PRD spec is "full-batch SGD"; training service is Adam-only by design (PRD § 4.1) — used Adam; intent (loss substantially reduced on tiny set) preserved. PROMPTS § 10 logs the choice.
+- [x] Removed `*/services/training.py` from coverage `omit`; coverage 100% on training.py
+
+### M4b — evaluation service
+
+- [ ] RED: `tests/unit/test_evaluation.py` (T-EV-01..06)
+- [ ] GREEN: `services/evaluation.py` (EvalResult, evaluate)
+- [ ] Remove `*/services/evaluation.py` from coverage `omit`
+
+### M4c — SDK wiring + scripts + integration smokes
+
+- [ ] GREEN: SDK.train, SDK.evaluate, SDK.run_experiment, SDK.run_grid; ExperimentSpec / ExperimentResult dataclasses
+- [ ] GREEN: `scripts/train.py`, `scripts/run_experiment.py` thin wrappers
+- [ ] Integration smoke: T-IT-01 (1 epoch each kind on tiny corpus)
+- [ ] Integration smoke: T-IT-02 (reproducibility — `tests/integration/test_reproducibility.py`)
+- [ ] Integration smoke: T-IT-03 (run_grid)
+- [ ] T-TR-10 (run_dir naming pattern via SDK)
 
 ---
 

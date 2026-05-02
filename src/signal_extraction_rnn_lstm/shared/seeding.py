@@ -34,13 +34,14 @@ def seed_everything(seed: int) -> None:
         torch.cuda.manual_seed_all(seed)
 
 
-def derive_seeds(runtime_seed: int) -> tuple[int, int]:
-    """Derive ``(corpus_seed, sampling_seed)`` from a single runtime seed.
+def derive_seeds(runtime_seed: int) -> tuple[int, int, int]:
+    """Derive ``(corpus_seed, sampling_seed, dataloader_seed)`` from one knob.
 
-    Uses ``np.random.SeedSequence(seed).spawn(2)`` so one user-supplied seed
-    deterministically yields both child seeds — see PRD_dataset_construction
-    § 6.  Returned ints are uint32-bounded.
+    Uses ``np.random.SeedSequence(seed).spawn(3)`` so one user-supplied seed
+    deterministically yields all three child seeds.  See
+    PRD_dataset_construction § 6 (corpus / sampling) and
+    PRD_training_evaluation § 5.2 (dataloader).
     """
     _check_int_seed("runtime_seed", runtime_seed)
-    a, b = np.random.SeedSequence(runtime_seed).spawn(2)
-    return int(a.generate_state(1)[0]), int(b.generate_state(1)[0])
+    a, b, c = np.random.SeedSequence(runtime_seed).spawn(3)
+    return tuple(int(s.generate_state(1)[0]) for s in (a, b, c))  # type: ignore[return-value]

@@ -140,11 +140,12 @@ All code-facing files are blocked until every item in M0 is checked and the user
 - [x] Removed `*/services/models/rnn.py` from coverage `omit`
 - [x] T-MD-11 step count 200 → 2000 (same calibration as T-MD-10; PROMPTS § 8)
 
-### M3d — LSTM
+### M3d — LSTM ✓ complete (2026-05-02)
 
-- [ ] RED: write `tests/unit/test_models/test_lstm.py` (T-MD-06, T-MD-09, T-MD-12, T-MD-15, T-MD-18)
-- [ ] GREEN: implement `services/models/lstm.py`
-- [ ] Remove `*/services/models/lstm.py` from coverage `omit`
+- [x] RED: `tests/unit/test_models/test_lstm.py` (T-MD-06, 09, 12, 15, 18 + LSTMConfig validation)
+- [x] GREEN: `services/models/lstm.py` (LSTMConfig + LSTMExtractor, 24 stmts)
+- [x] Removed `*/services/models/lstm.py` from coverage `omit`
+- [x] T-MD-12 step count 200 → 5000 (LSTM gating slower than FC/RNN; PROMPTS § 8)
 
 ### M3e — registry + cross-cutting + integration smoke
 

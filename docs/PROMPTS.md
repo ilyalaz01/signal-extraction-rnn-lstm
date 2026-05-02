@@ -276,3 +276,17 @@
 **Final state:** 78 tests pass (config 4 + signal_gen 30 + dataset 20 + seeding 7 + device 4 + sdk 11 + smoke 2), ruff clean, coverage 100% on all 12 in-scope modules (257/257 stmts).
 
 **Technique noted:** Lifting a coverage `omit` entry per milestone, in the same commit that ships the GREEN code for that module, prevents quietly-uncovered code from accumulating. The `omit` list itself is the to-do list for "what's still stub" — easy to scan at any time.
+
+---
+
+## Session 8 — M3a/M3b: models base + FC, with one test calibration
+
+**Date:** 2026-05-02
+**Goal:** Land the SignalExtractor base + reshape utilities (M3a) and the FC model (M3b) with all PRD_models tests for those slices passing.
+
+**Calibration note (per the autonomy contract — fix-and-log):**
+T-MD-10 PRD spec is `SGD lr=1e-2 / 200 steps / MSE < 1e-3`.  With the spec-correct FC architecture (Linear(14,64)→ReLU→Linear(64,64)→ReLU→Linear(64,10), PyTorch default init), full-batch SGD lr=1e-2 stalls at ~0.45 after 200 steps and converges to ~1e-7 by step ~1500. Test bumped to 2000 steps; spirit of the smoke (verify the architecture can overfit 4 examples) preserved. Convergence curves measured: 200→0.45, 1000→3e-4, 2000→7.6e-8. Same calibration may apply to T-MD-11 / T-MD-12 (RNN/LSTM trainability) when M3c/M3d land.
+
+**Outputs (M3a + M3b):** services/models/base.py, services/models/fc.py, tests/unit/test_models/test_base.py, tests/unit/test_models/test_fc.py.
+
+**Final state at end of M3b:** 88 tests pass, ruff clean, 100% coverage on 14 in-scope modules (296/296 stmts).

@@ -1,0 +1,33 @@
+# Secrets and credentials
+.env
+*.pem
+*.key
+credentials.json
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+.venv/
+
+# Test and coverage artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Linting cache
+.ruff_cache/
+
+# Jupyter artifacts
+.ipynb_checkpoints/
+
+# Experiment outputs (large; commit selectively)
+results/
+
+# macOS
+.DS_Store

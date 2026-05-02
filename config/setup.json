@@ -1,0 +1,39 @@
+{
+  "version": "1.00",
+  "runtime": {
+    "device": "auto",
+    "seed": 1337,
+    "dataloader": { "num_workers": 0 }
+  },
+  "signal": {
+    "fs": 1000,
+    "duration_s": 10,
+    "frequencies_hz": [2, 10, 50, 200],
+    "amplitudes": [1.0, 1.0, 1.0, 1.0],
+    "phases_rad": ["0", "pi/2", "pi", "3*pi/2"],
+    "noise": {
+      "alpha": 0.05,
+      "beta": "2*pi",
+      "distribution": "gaussian"
+    }
+  },
+  "dataset": {
+    "window": 10,
+    "n_train": 30000,
+    "n_val": 3750,
+    "n_test": 3750
+  },
+  "model": {
+    "fc":   { "hidden": [64, 64] },
+    "rnn":  { "hidden": 64, "layers": 1 },
+    "lstm": { "hidden": 64, "layers": 1 }
+  },
+  "training": {
+    "batch_size": 256,
+    "epochs": 30,
+    "optimizer": "adam",
+    "lr": 0.001,
+    "scheduler": null,
+    "early_stop_patience": 5
+  }
+}

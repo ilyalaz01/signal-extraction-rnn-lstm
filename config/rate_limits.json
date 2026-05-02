@@ -1,0 +1,15 @@
+{
+  "version": "1.00",
+  "_comment": "Vestigial schema required by SOFTWARE_PROJECT_GUIDELINES § 6.3. This project performs no external API calls (see ADR-001, ADR-012).",
+  "rate_limits": {
+    "services": {
+      "default": {
+        "requests_per_minute": 30,
+        "requests_per_hour": 500,
+        "concurrent_max": 5,
+        "retry_after_seconds": 30,
+        "max_retries": 3
+      }
+    }
+  }
+}

@@ -230,3 +230,29 @@
 **Final state:** 34 tests pass, ruff clean, coverage 100% on the 6 in-scope modules, total 100% (gated by omit list).
 
 **Technique noted:** When a TDD test file is reviewed before impl, one round of "show me the file" review is enough — afterwards, GREEN-phase coverage gaps that emerge can be filled by extending the same test file inline (e.g. extra validation cases, alternative noise distribution smoke test) without re-review, since they pin behavior already specified in the PRD.
+
+---
+
+## Session 6 — M2b: dataset RED → GREEN
+
+**Date:** 2026-05-02
+**Goal:** TDD-cycle for the dataset-construction subsystem. Produce `tests/unit/test_dataset.py` (RED) and `services/dataset.py` (GREEN) per `PRD_dataset_construction.md` v1.01 (T-DS-04..18; T-DS-01..03 retired with `compute_split_ranges`; T-DS-11' replaces T-DS-11).
+
+**Prompts (live):**
+1. Autonomous continuation — no per-step review.
+
+**Outputs:**
+- `tests/unit/test_dataset.py` — 142 code-LOC, 20 cases (15 T-DS + 5 edge-case/structural).
+- `src/signal_extraction_rnn_lstm/services/dataset.py` — 91 code-LOC (target ~100).
+- `pyproject.toml` — removed `*/services/dataset.py` from coverage `omit`.
+
+**Spec deviation (logged here for traceability):**
+- PRD § 3.3 sketches `WindowExample` as `@dataclass(frozen=True)`. The implementation uses `typing.NamedTuple` instead. Reason: `torch.utils.data.default_collate` collates NamedTuples field-wise out of the box across our supported torch range, but it does not natively handle frozen dataclasses on every version. Field-level interface (`.selector`, `.w_noisy`, `.w_clean`) is identical, so no caller change. T-DS-14 (DataLoader integration) and T-DS-08 (shapes) verify the contract; `test_window_example_is_namedtuple` pins the choice. The frozen-dataclass form remains a viable future swap if and when torch's collate fully supports dataclasses across our pinned range.
+
+**Statistical-test choices (no flake risk; all asserted at α=0.001):**
+- `_ks_two_sample_p` and `_ks_uniform_p` are hand-rolled (Smirnov asymptotic) instead of pulling in `scipy` — keeps the dep set lean (only torch + numpy + matplotlib + dev tools). Approximation is one-tailed exponential, sufficient for "p > 0.001" gate at sample sizes 30 000 / 3 750.
+- T-DS-12 class balance: 4σ tolerance per channel; with seed=7 fixed, the test is deterministic. Per-count failure probability under correct impl is ~6e-5; for 4 counts ~2e-4. Worst-case 1-in-5000, but this is bounded by the seed.
+
+**Final state:** 54 tests pass (4 config + 30 signal + 20 dataset), ruff clean, coverage 100% across all 9 in-scope modules.
+
+**Technique noted:** Hand-rolling small statistical helpers (Smirnov KS, normal-z) is preferable to adding a heavy dep when the project only needs them in tests. The asymptotic formula is short and well-documented.

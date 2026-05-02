@@ -2,7 +2,7 @@
 
 > **Last updated:** 2026-05-02
 > **Owner:** Student (all tasks unless noted).
-> **Milestone status:** M0 complete. M1 complete (committed 2026-05-02). M2a complete; M2b in progress.
+> **Milestone status:** M0 complete. M1 complete (committed 2026-05-02). M2a + M2b complete; M2c in progress.
 >
 > This is the live task board. Update checkbox state as each item completes. Add sub-items inline when a task spawns unforeseen work. Do not delete completed items — history is useful for the PROMPTS log and grader.
 
@@ -91,13 +91,14 @@ All code-facing files are blocked until every item in M0 is checked and the user
 - [x] Coverage 100% on signal_gen.py and shared/config.py (target ≥ 95%)
 - [x] `pyproject.toml` coverage `omit` list for not-yet-implemented stubs (re-include per milestone)
 
-### M2b — dataset (next)
+### M2b — dataset ✓ complete (2026-05-02)
 
-- [ ] RED: write `tests/unit/test_dataset.py` (all T-DS-* from PRD_dataset_construction.md § 9)
-- [ ] GREEN: implement `services/dataset.py`
-- [ ] REFACTOR: `ruff check` clean; file ≤ 100 LOC (internal target)
-- [ ] Coverage ≥ 95% on dataset.py
-- [ ] Remove `*/services/dataset.py` from coverage `omit`
+- [x] RED: write `tests/unit/test_dataset.py` (all T-DS-04..18 + edge cases; T-DS-01..03 retired in PRD v1.01; T-DS-11' replaces T-DS-11)
+- [x] GREEN: implement `services/dataset.py` (DatasetConfig, WindowExample, WindowDataset, SplitDatasets, build_split_datasets)
+- [x] REFACTOR: `ruff check` clean; dataset.py 91 code-LOC (target ~100)
+- [x] Coverage 100% on dataset.py (target ≥ 95%)
+- [x] Removed `*/services/dataset.py` from coverage `omit`
+- [x] Spec deviation noted: `WindowExample` is `NamedTuple` (PRD said `@dataclass(frozen=True)`); chosen for `default_collate` compat. Logged in PROMPTS § 6.
 
 ### M2c — SDK wiring + integration smoke
 

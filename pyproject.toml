@@ -53,7 +53,6 @@ omit = [
     # ships GREEN.  See docs/TODO.md for the milestone map.
     "*/services/evaluation.py",                # M4
     "*/services/training.py",                  # M4
-    "*/services/models/__init__.py",           # M3e (registry)
 ]
 
 [tool.coverage.report]

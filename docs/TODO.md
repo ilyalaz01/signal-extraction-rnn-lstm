@@ -2,7 +2,7 @@
 
 > **Last updated:** 2026-05-02
 > **Owner:** Student (all tasks unless noted).
-> **Milestone status:** M0 complete. M1 complete. M2 complete (2026-05-02). M3 in progress (M3a complete).
+> **Milestone status:** M0 complete. M1 complete. M2 complete (2026-05-02). M3 complete (2026-05-02). M4 next.
 >
 > This is the live task board. Update checkbox state as each item completes. Add sub-items inline when a task spawns unforeseen work. Do not delete completed items — history is useful for the PROMPTS log and grader.
 
@@ -147,13 +147,13 @@ All code-facing files are blocked until every item in M0 is checked and the user
 - [x] Removed `*/services/models/lstm.py` from coverage `omit`
 - [x] T-MD-12 step count 200 → 5000 (LSTM gating slower than FC/RNN; PROMPTS § 8)
 
-### M3e — registry + cross-cutting + integration smoke
+### M3e — registry + cross-cutting + integration smoke ✓ complete (2026-05-02)
 
-- [ ] GREEN: implement `services/models/__init__.py` (ModelKind, ModelConfig, build, registry dict)
-- [ ] RED: write `tests/unit/test_models/test_registry.py` (T-MD-03 dispatch, T-MD-19 grad-flow, T-MD-20 selector-differentiable)
-- [ ] Integration smoke: `tests/integration/test_models_smoke.py` (AC-MD-6)
-- [ ] Remove `*/services/models/__init__.py` from coverage `omit`
-- [ ] All T-MD-01 through T-MD-20 pass; coverage ≥ 90% on `services/models/`
+- [x] GREEN: `services/models/__init__.py` (ModelKind Literal, ModelConfig, build, _REGISTRY dict, parse_model_config) — 22 stmts
+- [x] RED→GREEN: `tests/unit/test_models/test_registry.py` (T-MD-03 dispatch + unknown-kind, T-MD-19 grad-flow, T-MD-20 selector-differentiable, parse_model_config round-trip)
+- [x] Integration smoke: `tests/integration/test_models_smoke.py` (AC-MD-6 — parametrized over fc/rnn/lstm)
+- [x] Removed `*/services/models/__init__.py` from coverage `omit`
+- [x] All T-MD-01..20 pass (108 tests total). Coverage 100% on `services/models/` (target ≥ 90%).
 
 ---
 

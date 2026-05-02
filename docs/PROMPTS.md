@@ -290,3 +290,23 @@ T-MD-10 PRD spec is `SGD lr=1e-2 / 200 steps / MSE < 1e-3`.  With the spec-corre
 **Outputs (M3a + M3b):** services/models/base.py, services/models/fc.py, tests/unit/test_models/test_base.py, tests/unit/test_models/test_fc.py.
 
 **Final state at end of M3b:** 88 tests pass, ruff clean, 100% coverage on 14 in-scope modules (296/296 stmts).
+
+---
+
+## Session 9 — M3c/M3d/M3e: RNN, LSTM, registry + integration smoke
+
+**Date:** 2026-05-02
+**Goal:** Land RNNExtractor (M3c), LSTMExtractor (M3d), and the cross-cutting registry + integration smoke (M3e). Close M3.
+
+**Calibration (continuation of session 8):** T-MD-12 (LSTM trainability) needed 5000 SGD steps lr=1e-2 to clear MSE < 5e-3. The 200→5000 bump matches the same pattern as T-MD-10/11 (FC/RNN at 2000); LSTM is slower because gating splits the gradient across four matrices. PROMPTS § 8 logs the curves (LSTM: 2000→0.02, 5000→3e-6).
+
+**Outputs:**
+- `services/models/rnn.py` (24 stmts) — vanilla RNN with tanh + seq-to-vector head; param count 5194.
+- `services/models/lstm.py` (24 stmts) — single-layer LSTM with the same head shape; param count 18826; PyTorch default forget-gate bias preserved (no Jozefowicz override).
+- `services/models/__init__.py` (22 stmts) — ModelKind, ModelConfig, _REGISTRY dict, build(), parse_model_config(). PRD called for ~15 LOC; the v1.02 PLAN sweep already raised the ceiling to 30.
+- `tests/unit/test_models/test_rnn.py`, `test_lstm.py`, `test_registry.py`.
+- `tests/integration/test_models_smoke.py` (AC-MD-6) — parametrized over fc/rnn/lstm, asserts shape and finite loss on a real DataLoader batch.
+
+**Final M3 state:** 108 tests pass, ruff clean, coverage 100% on all 17 in-scope modules (366/366 stmts). Coverage `omit` only retains `*/services/{evaluation,training}.py` (M4).
+
+**Technique noted:** When a TDD cycle calibrates more than one numeric in a PRD-prescribed test (here 200 → 2000 → 5000 steps across three tests), keep the calibration *uniform per architecture family* (FC and RNN at 2000; LSTM at 5000) — that way the structure of the test set still tells the story the PRD intended (LSTM is slower under SGD), even if the absolute numbers shift.

@@ -170,11 +170,12 @@ All code-facing files are blocked until every item in M0 is checked and the user
 - [x] T-TR-02 calibration: PRD spec is "full-batch SGD"; training service is Adam-only by design (PRD § 4.1) — used Adam; intent (loss substantially reduced on tiny set) preserved. PROMPTS § 10 logs the choice.
 - [x] Removed `*/services/training.py` from coverage `omit`; coverage 100% on training.py
 
-### M4b — evaluation service
+### M4b — evaluation service ✓ complete (2026-05-02)
 
-- [ ] RED: `tests/unit/test_evaluation.py` (T-EV-01..06)
-- [ ] GREEN: `services/evaluation.py` (EvalResult, evaluate)
-- [ ] Remove `*/services/evaluation.py` from coverage `omit`
+- [x] RED→GREEN: `tests/unit/test_evaluation.py` (T-EV-01..06 + restore-training-mode + empty-group NaN)
+- [x] GREEN: `services/evaluation.py` (EvalResult, evaluate, _write_results_json) — 50 stmts
+- [x] Spec deviation logged: `results.json` written with `spec={}` and `training={}` placeholders here; SDK.run_experiment will fill them in M4c.
+- [x] Removed `*/services/evaluation.py` from coverage `omit`. Coverage `omit` is now empty.
 
 ### M4c — SDK wiring + scripts + integration smokes
 

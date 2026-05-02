@@ -133,11 +133,12 @@ All code-facing files are blocked until every item in M0 is checked and the user
 - [x] Removed `*/services/models/fc.py` from coverage `omit`
 - [x] **T-MD-10 calibration:** PRD spec (SGD lr=1e-2 / 200 steps / MSE < 1e-3) numerically too tight; bumped to 2000 steps. PROMPTS § 8 logs the deviation and the convergence-curve evidence.
 
-### M3c — RNN
+### M3c — RNN ✓ complete (2026-05-02)
 
-- [ ] RED: write `tests/unit/test_models/test_rnn.py` (T-MD-05, T-MD-08, T-MD-11, T-MD-14, T-MD-17)
-- [ ] GREEN: implement `services/models/rnn.py`
-- [ ] Remove `*/services/models/rnn.py` from coverage `omit`
+- [x] RED: `tests/unit/test_models/test_rnn.py` (T-MD-05, 08, 11, 14, 17 + RNNConfig validation)
+- [x] GREEN: `services/models/rnn.py` (RNNConfig + RNNExtractor, 24 stmts, target ~30)
+- [x] Removed `*/services/models/rnn.py` from coverage `omit`
+- [x] T-MD-11 step count 200 → 2000 (same calibration as T-MD-10; PROMPTS § 8)
 
 ### M3d — LSTM
 

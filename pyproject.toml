@@ -54,7 +54,6 @@ omit = [
     "*/services/evaluation.py",                # M4
     "*/services/training.py",                  # M4
     "*/services/models/__init__.py",           # M3e (registry)
-    "*/services/models/rnn.py",                # M3c
     "*/services/models/lstm.py",               # M3d
 ]
 

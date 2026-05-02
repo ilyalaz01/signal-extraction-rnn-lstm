@@ -1,24 +1,29 @@
-"""Device resolution — maps config string to torch.device.
+"""Device resolution — maps a config string to a ``torch.device``.
 
 Called once at SDK initialisation; all downstream services receive the
-resolved torch.device object. See PLAN.md § 11.5 and ADR-006 (deferred).
+resolved ``torch.device`` object. See PLAN.md § 11.5 and ADR-006 (deferred).
 
 Public surface:
-    resolve_device(device_str) → object  (torch.device in M2)
+    resolve_device(device_str) → torch.device
 """
 
+from __future__ import annotations
 
-def resolve_device(device_str: str) -> object:
-    """Resolve a device string to a torch.device.
+import torch
+
+
+def resolve_device(device_str: str) -> torch.device:
+    """Resolve a device string to a ``torch.device``.
 
     Args:
-        device_str: one of 'cpu', 'cuda', or 'auto'.
-            'auto' selects 'cuda' if torch.cuda.is_available(), else 'cpu'.
-
-    Returns:
-        torch.device instance.
+        device_str: ``'cpu'``, ``'cuda'``, or ``'auto'``.
+            ``'auto'`` selects ``cuda`` when available, else ``cpu``.
 
     Raises:
-        ValueError: if device_str is not one of the accepted values.
+        ValueError: if ``device_str`` is not one of the accepted values.
     """
-    raise NotImplementedError("M2")
+    if device_str == "auto":
+        return torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if device_str in ("cpu", "cuda"):
+        return torch.device(device_str)
+    raise ValueError(f"device must be 'cpu', 'cuda', or 'auto', got {device_str!r}")

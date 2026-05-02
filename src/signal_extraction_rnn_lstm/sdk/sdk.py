@@ -5,7 +5,23 @@ No service module may be imported directly from outside the package.
 See PLAN.md § 3–6 and SOFTWARE_PROJECT_GUIDELINES § 3.1.
 """
 
+from __future__ import annotations
+
 from pathlib import Path
+
+from signal_extraction_rnn_lstm.services.dataset import (
+    SplitDatasets,
+    build_split_datasets,
+    parse_dataset_config,
+)
+from signal_extraction_rnn_lstm.services.signal_gen import (
+    Corpus,
+    generate_corpus,
+    parse_signal_config,
+)
+from signal_extraction_rnn_lstm.shared.config import load_config
+from signal_extraction_rnn_lstm.shared.device import resolve_device
+from signal_extraction_rnn_lstm.shared.seeding import derive_seeds, seed_everything
 
 
 class SDK:
@@ -13,12 +29,12 @@ class SDK:
 
     Input:
         config_path (Path | None): path to setup.json; defaults to
-            <project_root>/config/setup.json.
+            ``<project_root>/config/setup.json``.
     Output:
         SDK instance exposing all project operations.
     Setup:
-        seed (int | None): overrides config ``runtime.seed``.
-        device (str | None): 'cuda' | 'cpu' | 'auto'; overrides config.
+        seed (int | None): overrides ``config['runtime']['seed']``.
+        device (str | None): ``'cuda' | 'cpu' | 'auto'``; overrides config.
     """
 
     def __init__(
@@ -28,74 +44,32 @@ class SDK:
         seed: int | None = None,
         device: str | None = None,
     ) -> None:
-        """Load config, seed RNG, and resolve compute device.
+        cfg = load_config(config_path)
+        self._config = cfg
+        self.seed: int = int(seed) if seed is not None else int(cfg["runtime"]["seed"])
+        device_str = device if device is not None else cfg["runtime"]["device"]
+        self.device = resolve_device(device_str)
+        seed_everything(self.seed)
+        self._corpus_seed, self._sampling_seed = derive_seeds(self.seed)
+        self._signal_config = parse_signal_config(cfg["signal"])
+        self._dataset_config = parse_dataset_config(cfg["dataset"])
 
-        Args:
-            config_path: path to setup.json; None → default location.
-            seed: seed override; None → use config value.
-            device: device override; None → use config value.
-        """
-        raise NotImplementedError("M2")
+    def generate_corpus(self) -> Corpus:
+        """Generate the 10-vector sinusoid corpus."""
+        return generate_corpus(self._signal_config, self._corpus_seed)
 
-    # ------------------------------------------------------------------
-    # Core operations
-    # ------------------------------------------------------------------
-
-    def generate_corpus(self) -> object:
-        """Generate the 10-vector sinusoid corpus.
-
-        Returns:
-            Corpus dataclass (4 clean + 4 noisy sinusoids + two composite
-            sums). See PRD_signal_generation.md for field contracts.
-        """
-        raise NotImplementedError("M2")
-
-    def build_dataset(self, corpus: object) -> object:
-        """Sample windows from corpus and return train/val/test splits.
-
-        Args:
-            corpus: Corpus produced by generate_corpus().
-
-        Returns:
-            SplitDatasets(train, val, test) — three DataLoader objects.
-        """
-        raise NotImplementedError("M2")
+    def build_dataset(self, corpus: Corpus) -> SplitDatasets:
+        """Sample windows from corpus and return train/val/test splits."""
+        return build_split_datasets(corpus, self._dataset_config, self._sampling_seed)
 
     def train(self, model_kind: str, datasets: object) -> object:
-        """Train one model architecture on the provided datasets.
-
-        Args:
-            model_kind: one of 'fc', 'rnn', 'lstm'.
-            datasets: SplitDatasets produced by build_dataset().
-
-        Returns:
-            TrainingResult(model_id, train_history, val_history,
-                checkpoint_path).
-        """
+        """Train one model architecture on the provided datasets (M4)."""
         raise NotImplementedError("M4")
 
     def evaluate(self, trained: object, datasets: object) -> object:
-        """Evaluate a trained model; return overall and per-frequency MSE.
-
-        Args:
-            trained: TrainingResult (from train()) or a model_id string
-                pointing to a saved checkpoint. MUST NOT be a raw nn.Module
-                — that would leak internal types across the SDK boundary.
-            datasets: SplitDatasets produced by build_dataset().
-
-        Returns:
-            EvalResult(overall_mse, per_freq_mse).
-        """
+        """Evaluate a trained model; return overall and per-frequency MSE (M4)."""
         raise NotImplementedError("M4")
 
     def run_experiment(self, spec: object) -> object:
-        """Run a complete experiment: generate → build → train → evaluate.
-
-        Args:
-            spec: ExperimentSpec describing model kind, config overrides,
-                and output directory.
-
-        Returns:
-            ExperimentResult with all metrics and paths to artefacts.
-        """
+        """Run a complete experiment: generate → build → train → evaluate (M4)."""
         raise NotImplementedError("M4")

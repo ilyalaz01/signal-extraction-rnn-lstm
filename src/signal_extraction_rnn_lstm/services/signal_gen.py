@@ -149,6 +149,30 @@ def make_noisy(config: SignalConfig, rng: np.random.Generator) -> np.ndarray:
     return out.astype(np.float32)
 
 
+def parse_signal_config(d: dict) -> SignalConfig:
+    """Build a validated ``SignalConfig`` from ``config['signal']`` dict.
+
+    Phase strings (``"pi/2"`` etc.) and ``noise.beta`` are evaluated through
+    ``shared.config.parse_angle``; numeric values pass through unchanged.
+    """
+    from signal_extraction_rnn_lstm.shared.config import parse_angle
+    noise = d["noise"]
+    beta = parse_angle(noise["beta"]) if isinstance(noise["beta"], str) else float(noise["beta"])
+    phases = tuple(
+        parse_angle(p) if isinstance(p, str) else float(p) for p in d["phases_rad"]
+    )
+    return SignalConfig(
+        fs=int(d["fs"]),
+        duration_s=int(d["duration_s"]),
+        frequencies_hz=tuple(float(f) for f in d["frequencies_hz"]),
+        amplitudes=tuple(float(a) for a in d["amplitudes"]),
+        phases_rad=phases,
+        noise_alpha=float(noise["alpha"]),
+        noise_beta=beta,
+        noise_distribution=noise["distribution"],
+    )
+
+
 def generate_corpus(config: SignalConfig, seed: int) -> Corpus:
     """Build the full 10-vector ``Corpus``.
 

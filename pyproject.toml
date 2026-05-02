@@ -54,9 +54,6 @@ omit = [
     "*/services/evaluation.py",       # M4
     "*/services/training.py",         # M4
     "*/services/models/*",            # M3
-    "*/shared/device.py",             # M2c
-    "*/shared/seeding.py",            # M2c
-    "*/sdk/sdk.py",                   # M2c init + M4 train/eval; treat as stub for now
 ]
 
 [tool.coverage.report]

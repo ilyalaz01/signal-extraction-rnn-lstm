@@ -256,3 +256,23 @@
 **Final state:** 54 tests pass (4 config + 30 signal + 20 dataset), ruff clean, coverage 100% across all 9 in-scope modules.
 
 **Technique noted:** Hand-rolling small statistical helpers (Smirnov KS, normal-z) is preferable to adding a heavy dep when the project only needs them in tests. The asymptotic formula is short and well-documented.
+
+---
+
+## Session 7 — M2c: SDK wiring + integration smoke
+
+**Date:** 2026-05-02
+**Goal:** Wire the SDK so a single `SDK(seed=…)` instance reaches `generate_corpus() → build_dataset()` end-to-end. Land the AC-DS-7 integration smoke test.
+
+**Outputs:**
+- `src/signal_extraction_rnn_lstm/shared/seeding.py` — `seed_everything` (random + numpy + torch CPU/CUDA) and `derive_seeds(runtime_seed) → (corpus_seed, sampling_seed)` via `SeedSequence(seed).spawn(2)`. 18 code-LOC.
+- `src/signal_extraction_rnn_lstm/shared/device.py` — `resolve_device('auto'|'cpu'|'cuda') → torch.device`. 8 code-LOC.
+- `services/signal_gen.py` — added `parse_signal_config(d) → SignalConfig`. Total 120 code-LOC (matches PRD target).
+- `services/dataset.py` — added `parse_dataset_config(d) → DatasetConfig`. Total 98 code-LOC.
+- `sdk/sdk.py` — `__init__` loads config, derives seeds, builds typed configs; `generate_corpus`, `build_dataset` delegate. M4 methods still raise `NotImplementedError("M4")`. 42 code-LOC.
+- `tests/unit/test_seeding.py`, `test_device.py`, `test_sdk.py`; `tests/integration/test_sdk_smoke.py` (AC-DS-7).
+- `pyproject.toml` — removed `*/shared/device.py`, `*/shared/seeding.py`, `*/sdk/sdk.py` from coverage `omit`.
+
+**Final state:** 78 tests pass (config 4 + signal_gen 30 + dataset 20 + seeding 7 + device 4 + sdk 11 + smoke 2), ruff clean, coverage 100% on all 12 in-scope modules (257/257 stmts).
+
+**Technique noted:** Lifting a coverage `omit` entry per milestone, in the same commit that ships the GREEN code for that module, prevents quietly-uncovered code from accumulating. The `omit` list itself is the to-do list for "what's still stub" — easy to scan at any time.

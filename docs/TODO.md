@@ -2,7 +2,7 @@
 
 > **Last updated:** 2026-05-02
 > **Owner:** Student (all tasks unless noted).
-> **Milestone status:** M0 complete. M1 complete (committed 2026-05-02). M2a + M2b complete; M2c in progress.
+> **Milestone status:** M0 complete. M1 complete. M2 complete (M2a + M2b + M2c, 2026-05-02). M3 next.
 >
 > This is the live task board. Update checkbox state as each item completes. Add sub-items inline when a task spawns unforeseen work. Do not delete completed items — history is useful for the PROMPTS log and grader.
 
@@ -100,13 +100,16 @@ All code-facing files are blocked until every item in M0 is checked and the user
 - [x] Removed `*/services/dataset.py` from coverage `omit`
 - [x] Spec deviation noted: `WindowExample` is `NamedTuple` (PRD said `@dataclass(frozen=True)`); chosen for `default_collate` compat. Logged in PROMPTS § 6.
 
-### M2c — SDK wiring + integration smoke
+### M2c — SDK wiring + integration smoke ✓ complete (2026-05-02)
 
-- [ ] GREEN: `shared/seeding.py` (seed_everything)
-- [ ] GREEN: `shared/device.py` (resolve_device)
-- [ ] GREEN: SDK.__init__, SDK.generate_corpus, SDK.build_dataset
-- [ ] Integration smoke: `SDK.generate_corpus()` → `SDK.build_dataset()` → `len(splits.train)` succeeds
-- [ ] Remove the corresponding entries from coverage `omit`
+- [x] GREEN: `shared/seeding.py` — `seed_everything`, `derive_seeds(runtime_seed) → (corpus_seed, sampling_seed)`
+- [x] GREEN: `shared/device.py` — `resolve_device(str) → torch.device`
+- [x] GREEN: `parse_signal_config(d) → SignalConfig` (added to `services/signal_gen.py`)
+- [x] GREEN: `parse_dataset_config(d) → DatasetConfig` (added to `services/dataset.py`)
+- [x] GREEN: `SDK.__init__`, `SDK.generate_corpus`, `SDK.build_dataset`; M4 methods still raise `NotImplementedError("M4")`
+- [x] Integration smoke: `tests/integration/test_sdk_smoke.py` — full path + reproducibility under same seed
+- [x] Removed `*/shared/device.py`, `*/shared/seeding.py`, `*/sdk/sdk.py` from coverage `omit`
+- [x] Coverage 100% on all 12 in-scope modules (target ≥ 85%)
 
 ---
 

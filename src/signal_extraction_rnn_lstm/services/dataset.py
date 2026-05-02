@@ -125,6 +125,16 @@ class SplitDatasets:
     sampling_seed: int
 
 
+def parse_dataset_config(d: dict) -> DatasetConfig:
+    """Build a validated ``DatasetConfig`` from ``config['dataset']`` dict."""
+    return DatasetConfig(
+        window=int(d["window"]),
+        n_train=int(d["n_train"]),
+        n_val=int(d["n_val"]),
+        n_test=int(d["n_test"]),
+    )
+
+
 def _sample_index_table(rng: np.random.Generator, n: int, n_pool: int) -> np.ndarray:
     t0 = rng.integers(0, n_pool, size=n, dtype=np.int64)
     k = rng.integers(0, N_SINUSOIDS, size=n, dtype=np.int64)

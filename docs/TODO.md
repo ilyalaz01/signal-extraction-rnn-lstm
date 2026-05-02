@@ -1,8 +1,8 @@
 # TODO — Signal Source Extraction Study
 
-> **Last updated:** 2026-05-02
+> **Last updated:** 2026-05-03
 > **Owner:** Student (all tasks unless noted).
-> **Milestone status:** M0–M4 complete. M5: ADR-007 + EXP-000 smoke + EXP-001 (β=2π floor finding) + EXP-002 (β sweep, β_max_useful=π/4) + EXP-003 (3×3 grid at β=π/4) all green; **RETURN TO COLLABORATOR for thesis-evaluation step (revised, two data points).**
+> **Milestone status:** M0–M4 complete. M5: ADR-007 + EXP-000 smoke + EXP-001 (β=2π floor) + EXP-002 (β sweep → β_max_useful=π/4) + EXP-003 (3×3 grid at β=π/4) + EXP-008 (RNN h=128 capacity-match at β=π/4) all green; **RETURN TO COLLABORATOR for README narrative.**
 >
 > This is the live task board. Update checkbox state as each item completes. Add sub-items inline when a task spawns unforeseen work. Do not delete completed items — history is useful for the PROMPTS log and grader.
 
@@ -211,6 +211,11 @@ All code-facing files are blocked until every item in M0 is checked and the user
   - [x] Per-cell mean ± std MSE table (≈0.17 at 200 Hz down to ≈0.32 at 2 Hz across all kinds).
   - [x] Spearman ρ + one-sided p-value computed (ρ=+0.80, p=0.958).
   - [ ] **Outcome A/B/C/D verdict + README template sentences over BOTH EXP-002 (regime finding) and EXP-003 (architectural comparison) — DEFERRED to collaborator session.**
+- [x] **EXP-008** parameter-matched RNN (hidden=128, 18,570 params ≈ 98.6 % of LSTM's 18,826) at β=π/4, 3 seeds.
+  - [x] `docs/experiments/EXP-008-rnn-parameter-matched.md` (planned doc first, then results).
+  - [x] 3 runs in 53.6 s. RNN-128 overall mean 0.2743 ± 0.0072 (vs RNN-64 0.2752 ± 0.0057, LSTM-64 0.2709 ± 0.0074).
+  - [x] LSTM-vs-RNN-128 rel(k) at 2/10/50/200 Hz: +0.91, +1.02, +1.32, +2.15 % — sign preserved everywhere; magnitude shrinks at 3 of 4 cells but does not close to within seed-std.
+  - [ ] **H0/H1 reading + how this informs the README — DEFERRED to collaborator session.**
 - [ ] `EXP-002` through `EXP-004`: sensitivity sweeps (noise α, noise β, dataset size) — write ADR-007 first
 - [ ] `EXP-005`: bidirectional ablation (per § 13.1 of PRD_models.md)
 - [ ] `EXP-006`: hidden-state init scheme ablation (deferred from PRD_models.md § 13.3)

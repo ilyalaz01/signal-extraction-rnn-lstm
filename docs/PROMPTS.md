@@ -403,3 +403,29 @@ T-TR-02 PRD spec writes "full-batch SGD"; the training service is **Adam-only** 
 - Compute remains cheap: full EXP-002 + EXP-003 = 171.4 s combined; plenty of headroom for an EXP-003.5 multi-β grid or EXP-008 parameter-matched RNN if useful.
 
 **Returning to collaborator for the revised thesis-evaluation step**, this time with two data points (EXP-002 regime curve + EXP-003 architectural comparison at β=π/4). The README's "Thesis evaluation" chapter will have two sub-sections instead of one, and that framing emerged from the data rather than from the original PRD.
+
+---
+
+## Session 14 — M5 ablation: EXP-008 parameter-matched RNN (h=128) at β=π/4
+
+**Date:** 2026-05-03
+**Goal (collaborator-prescribed):** Resolve the LSTM-vs-RNN gap-source confound surfaced by EXP-003. Solve `h^2 + 17h + 10 ≈ 18,826` for the vanilla RNN (input=5, head Linear(h,10)) and re-run the 3-seed grid for RNN at the rounded-down `hidden=128`, holding β=π/4 fixed for direct EXP-003 comparability.
+
+**Math + verification (recorded for traceability):** quadratic gives `h ≈ 128.94`. Empirical param count at h=128: **18,570** params (98.64 % of LSTM-64's 18,826, well within the PRD's 5 % allowance). The rounded-down choice is the conservative one — any residual LSTM advantage at this comparison can not be blamed on RNN-128 having extra capacity.
+
+**Outputs:**
+- `docs/experiments/EXP-008-rnn-parameter-matched.md` — drafted as a plan doc first (math, hypothesis, sweep, acceptance gate, what-this-doesn't-do); results filled after the run.
+- `results/EXP-008-rnn-param-matched-h128/{grid_log.json, summary.json, <run_dir>/}` — 3 runs, each `n_params = 18570` (verified).
+
+**Headline numbers (no verdict):**
+- 3 runs in 53.6 s wall-clock. All finite.
+- Overall test MSE: RNN-128 = 0.2743 ± 0.0072, RNN-64 (EXP-003) = 0.2752 ± 0.0057, LSTM-64 (EXP-003) = 0.2709 ± 0.0074. Capacity 64→128 changes overall mean by 0.0009 (~0.13σ — noise).
+- Per-cell rel(k) (LSTM-64 vs RNN-128) at 2/10/50/200 Hz: **+0.91 / +1.02 / +1.32 / +2.15 %** vs EXP-003's RNN-64 reference of **+1.50 / +0.81 / +2.00 / +2.48 %**. Sign preserved at every cell; magnitudes shrink at 3 of 4 cells (notably 50 Hz and 200 Hz) but no cell collapses to within the seed-std band.
+- Per-cell std at h=128 is comparable to h=64 (no training-stability degradation from the capacity bump).
+
+**Worth flagging for the README session:**
+- The capacity bump 64→128 did *not* materially improve RNN: both RNN versions sit at ~0.275 overall mean. The RNN's bottleneck on this task is therefore **not** capacity — it's something the gating buys you that capacity alone cannot replace. This is consistent with H1 ("gating contributes") but at small magnitude.
+- All |rel(k)| stay below 10 % even after the capacity match. Outcome C (Refutation, by the strict letter of PRD § 8.4) appears unchanged, but the inverted-magnitude trend (LSTM's edge *grows* with frequency) and the capacity-match outcome together motivate prose nuance instead of a one-word verdict.
+- Compute used so far across all M5 experiments: ~225 s. Plenty of budget left if a tighter-N seed grid or an α-sweep is wanted before the README; not pre-empting the call.
+
+**Returning to collaborator for the README narrative.** The README "Thesis evaluation" chapter now has three coherent data points: (a) regime curve (EXP-002), (b) architectural comparison at β_max_useful (EXP-003), (c) capacity-vs-gating ablation (EXP-008). All three are documented; verdict prose and the Outcome A/B/C/D call are deferred to the joint session.

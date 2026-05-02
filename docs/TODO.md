@@ -2,7 +2,7 @@
 
 > **Last updated:** 2026-05-02
 > **Owner:** Student (all tasks unless noted).
-> **Milestone status:** M0 complete. M1 complete. M2 complete. M3 complete. M4 in progress (M4a complete).
+> **Milestone status:** M0 complete. M1 complete. M2 complete. M3 complete. M4 complete (2026-05-02). **RETURN TO COLLABORATOR before launching EXP-001 in M5.**
 >
 > This is the live task board. Update checkbox state as each item completes. Add sub-items inline when a task spawns unforeseen work. Do not delete completed items — history is useful for the PROMPTS log and grader.
 
@@ -177,14 +177,21 @@ All code-facing files are blocked until every item in M0 is checked and the user
 - [x] Spec deviation logged: `results.json` written with `spec={}` and `training={}` placeholders here; SDK.run_experiment will fill them in M4c.
 - [x] Removed `*/services/evaluation.py` from coverage `omit`. Coverage `omit` is now empty.
 
-### M4c — SDK wiring + scripts + integration smokes
+### M4c — SDK wiring + scripts + integration smokes ✓ complete (2026-05-02)
 
-- [ ] GREEN: SDK.train, SDK.evaluate, SDK.run_experiment, SDK.run_grid; ExperimentSpec / ExperimentResult dataclasses
-- [ ] GREEN: `scripts/train.py`, `scripts/run_experiment.py` thin wrappers
-- [ ] Integration smoke: T-IT-01 (1 epoch each kind on tiny corpus)
-- [ ] Integration smoke: T-IT-02 (reproducibility — `tests/integration/test_reproducibility.py`)
-- [ ] Integration smoke: T-IT-03 (run_grid)
-- [ ] T-TR-10 (run_dir naming pattern via SDK)
+- [x] GREEN: ExperimentSpec / ExperimentResult dataclasses (live in sdk/sdk.py per PRD § 9.1).
+- [x] GREEN: SDK.train, SDK.evaluate, SDK.run_experiment, SDK.run_grid; SDK.__init__ now accepts ``results_root`` (Path | None) — defaults to ``<project>/results``.
+- [x] GREEN: results.json finalisation — evaluate writes placeholders; SDK.run_experiment fills `spec` and `training` keys.
+- [x] GREEN: `scripts/train.py`, `scripts/run_experiment.py` thin CLI wrappers (argparse → SDK methods).
+- [x] Integration smoke: T-IT-01 in `tests/integration/test_sdk_run_experiment.py` (parametrized over fc/rnn/lstm).
+- [x] Integration smoke: T-IT-02 in `tests/integration/test_reproducibility.py`.
+- [x] Integration smoke: T-IT-03 in `tests/integration/test_sdk_run_experiment.py` (run_grid distinct run_dirs).
+- [x] T-TR-10 (run_dir naming pattern) in `tests/unit/test_sdk.py`.
+
+### M4 final state
+
+- 143 tests pass, ruff clean, coverage 100% on all 19 in-scope modules (595/595 stmts).
+- LOC: training.py 128 (hard 140), evaluation.py 69 (hard 130), sdk/sdk.py 108 (PRD allowed 120 total), test files all ≤ 150.
 
 ---
 

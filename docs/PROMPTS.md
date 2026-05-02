@@ -329,3 +329,25 @@ T-TR-02 PRD spec writes "full-batch SGD"; the training service is **Adam-only** 
 - `tests/unit/test_config.py` extended with three apply_overrides tests (T-TR-09).
 
 **Final state at end of M4a:** 127 tests pass, ruff clean, coverage 100% on all 18 in-scope modules (493/493 stmts).
+
+---
+
+## Session 11 — M4b: evaluation; M4c: SDK wiring + integration smokes
+
+**Date:** 2026-05-02
+**Goal:** Close M4 — evaluation service, SDK wiring (train / evaluate / run_experiment / run_grid), CLI scripts, T-IT-01/02/03 integration smokes.
+
+**Spec deviations (logged):**
+1. `EvalResult.frequencies_hz`: PRD § 7.2 referenced `constants.FREQUENCIES_HZ` for the Hz mapping, but `constants.py` policy excludes config-mutable values (frequencies, amplitudes, phases, noise strengths). Resolution: `EvalResult` carries `frequencies_hz: tuple[float, ...]` derived at evaluate-time from `datasets.test.corpus.frequencies_hz`. The `per_freq_hz` property is identical from the caller's perspective; ablations that change the locked frequency set still get correct labels.
+2. `evaluate()` writes results.json with `spec={}` and `training={}` placeholders; `SDK.run_experiment()` overwrites those two keys after evaluate returns. The PRD said `evaluate writes results.json` and AC-TE-7 said `SDK.run_experiment writes results.json` — these are reconcilable only by splitting the write across the two layers, which is what we did.
+3. `SDK.__init__` accepts `results_root: Path | None`, defaulting to `<project>/results`. Tests pass `results_root=tmp_path` to keep run_dirs out of the project tree. Not in the PRD signature but necessary for safe testing; non-test callers ignore the arg.
+
+**Outputs:**
+- `services/evaluation.py` (69 code-LOC, hard 130) — EvalResult, evaluate(), _write_results_json.
+- `sdk/sdk.py` (108 code-LOC, hard 120) — ExperimentSpec / ExperimentResult; SDK.train/evaluate/run_experiment/run_grid; _make_run_dir; _finalise_results_json.
+- `scripts/train.py`, `scripts/run_experiment.py` (argparse → SDK).
+- `tests/unit/test_evaluation.py`, `tests/integration/test_sdk_run_experiment.py`, `tests/integration/test_reproducibility.py`, plus M4 additions to `tests/unit/test_sdk.py`.
+
+**Final state at end of M4:** 143 tests pass, ruff clean, coverage 100% on all 19 in-scope modules (595/595 stmts). Coverage `omit` list is empty; every implemented module is fully measured.
+
+**Stopping for collaborator before EXP-001** per the autonomy contract.

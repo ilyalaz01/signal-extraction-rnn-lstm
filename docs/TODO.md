@@ -2,7 +2,7 @@
 
 > **Last updated:** 2026-05-02
 > **Owner:** Student (all tasks unless noted).
-> **Milestone status:** M0 complete. M1 complete. M2 complete (M2a + M2b + M2c, 2026-05-02). M3 next.
+> **Milestone status:** M0 complete. M1 complete. M2 complete (2026-05-02). M3 in progress (M3a complete).
 >
 > This is the live task board. Update checkbox state as each item completes. Add sub-items inline when a task spawns unforeseen work. Do not delete completed items — history is useful for the PROMPTS log and grader.
 
@@ -117,16 +117,40 @@ All code-facing files are blocked until every item in M0 is checked and the user
 
 *Prerequisite: M2 complete.*
 
-- [ ] RED: write `tests/unit/test_models/test_base.py` (T-MD-01, T-MD-02, T-MD-03)
+> **Note on the original split:** the TODO v1.01 grouped T-MD-03 (registry dispatch) under `test_base.py` — it is moved to `test_registry.py` because registry dispatch needs all three concrete classes to exist. T-MD-19 / T-MD-20 (cross-cutting grad flow) also live in `test_registry.py`.
+
+### M3a — base + reshape utilities ✓ complete (2026-05-02)
+
+- [x] RED: write `tests/unit/test_models/test_base.py` (T-MD-01, T-MD-02 + abstract-base contract + length-agnostic reshape)
+- [x] GREEN: implement `services/models/base.py` (SignalExtractor, _to_fc_input, _to_seq_input)
+- [x] REFACTOR: ruff clean; base.py 11 stmts (target ~40); 100% covered
+- [x] Removed `*/services/models/base.py` from coverage `omit` (per-file omit list now enumerates fc/rnn/lstm/__init__)
+
+### M3b — FC
+
 - [ ] RED: write `tests/unit/test_models/test_fc.py` (T-MD-04, T-MD-07, T-MD-10, T-MD-13, T-MD-16)
+- [ ] GREEN: implement `services/models/fc.py` (FCConfig, FCExtractor)
+- [ ] Remove `*/services/models/fc.py` from coverage `omit`
+
+### M3c — RNN
+
 - [ ] RED: write `tests/unit/test_models/test_rnn.py` (T-MD-05, T-MD-08, T-MD-11, T-MD-14, T-MD-17)
+- [ ] GREEN: implement `services/models/rnn.py`
+- [ ] Remove `*/services/models/rnn.py` from coverage `omit`
+
+### M3d — LSTM
+
 - [ ] RED: write `tests/unit/test_models/test_lstm.py` (T-MD-06, T-MD-09, T-MD-12, T-MD-15, T-MD-18)
-- [ ] RED: write `tests/unit/test_models/test_registry.py` (T-MD-19, T-MD-20)
-- [ ] GREEN: implement `services/models/base.py`, `fc.py`, `rnn.py`, `lstm.py`, `__init__.py`
-- [ ] REFACTOR: `ruff check` clean; each file ≤ its PLAN.md § 8 per-file ceiling
-- [ ] All T-MD-01 through T-MD-20 pass
-- [ ] Coverage ≥ 90% on `services/models/`
+- [ ] GREEN: implement `services/models/lstm.py`
+- [ ] Remove `*/services/models/lstm.py` from coverage `omit`
+
+### M3e — registry + cross-cutting + integration smoke
+
+- [ ] GREEN: implement `services/models/__init__.py` (ModelKind, ModelConfig, build, registry dict)
+- [ ] RED: write `tests/unit/test_models/test_registry.py` (T-MD-03 dispatch, T-MD-19 grad-flow, T-MD-20 selector-differentiable)
 - [ ] Integration smoke: `tests/integration/test_models_smoke.py` (AC-MD-6)
+- [ ] Remove `*/services/models/__init__.py` from coverage `omit`
+- [ ] All T-MD-01 through T-MD-20 pass; coverage ≥ 90% on `services/models/`
 
 ---
 

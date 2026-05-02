@@ -1,29 +1,52 @@
-"""Base model interface.
+"""Abstract base + selector-broadcast reshape utilities.
 
-Defines the shared forward-pass contract for FC, RNN, and LSTM.
-All three models must produce output shape (B, 10) regardless of input
-layout. See PRD_models.md § 5 and PLAN.md § 7.2.
+Defines the shared ``SignalExtractor(nn.Module, abc.ABC)`` interface that
+FC, RNN, and LSTM all implement, plus the two private reshape helpers
+(``_to_fc_input``, ``_to_seq_input``) that materialize the selector-broadcast
+scheme (ADR-003).  All concrete models call these helpers — the reshape
+lives once.
 """
 
+from __future__ import annotations
 
-class SignalExtractor:
-    """Abstract base for all three architectures.
+import abc
 
-    Public type contract fixed in PRD_models.md § 3.4. Subclasses must
-    implement forward() with the shape contract from PLAN.md § 7.2.
-    In M3 this class will extend torch.nn.Module.
+import torch
+from torch import nn
 
-    Input  (forward): model-specific — see subclass docstrings.
-    Output (forward): tensor of shape (B, OUTPUT_SIZE) = (B, 10).
+
+def _to_fc_input(selector: torch.Tensor, w_noisy: torch.Tensor) -> torch.Tensor:
+    """Concatenate selector and window into a flat (B, 14) tensor.
+
+    Input:  selector (B, 4), w_noisy (B, 10).
+    Output: (B, 14) float32 — flat selector ⊕ window.
+    Setup:  pure function. No allocation beyond ``torch.cat``.
+    """
+    return torch.cat([selector, w_noisy], dim=-1)
+
+
+def _to_seq_input(selector: torch.Tensor, w_noisy: torch.Tensor) -> torch.Tensor:
+    """Tile selector along time and concatenate per-step → (B, T, 5).
+
+    Input:  selector (B, 4), w_noisy (B, T).
+    Output: (B, T, 5) float32 — per step ``[w_noisy[t], C[0..3]]``.
+    Setup:  pure function.  Selector is broadcast-tiled along the time axis.
+    """
+    sel_tiled = selector.unsqueeze(1).expand(-1, w_noisy.shape[-1], -1)
+    w_unsq = w_noisy.unsqueeze(-1)
+    return torch.cat([w_unsq, sel_tiled], dim=-1)
+
+
+class SignalExtractor(nn.Module, abc.ABC):
+    """Abstract base for FC, RNN, and LSTM extractors.
+
+    Input:  ``(selector: (B, 4) float32, w_noisy: (B, 10) float32)``.
+    Output: ``w_pred: (B, 10) float32``.
+    Setup:  subclasses configure their own internal layers.  Models are
+            invoked as ``model(selector, w_noisy)`` (PyTorch ``__call__``);
+            no separate ``predict()`` method.
     """
 
-    def forward(self, x: object) -> object:
-        """Run the forward pass.
-
-        Args:
-            x: input tensor, shape depends on model kind.
-
-        Returns:
-            Predicted clean window, shape (B, 10).
-        """
-        raise NotImplementedError("M3")
+    @abc.abstractmethod
+    def forward(self, selector: torch.Tensor, w_noisy: torch.Tensor) -> torch.Tensor:
+        ...

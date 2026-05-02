@@ -351,3 +351,25 @@ T-TR-02 PRD spec writes "full-batch SGD"; the training service is **Adam-only** 
 **Final state at end of M4:** 143 tests pass, ruff clean, coverage 100% on all 19 in-scope modules (595/595 stmts). Coverage `omit` list is empty; every implemented module is fully measured.
 
 **Stopping for collaborator before EXP-001** per the autonomy contract.
+
+---
+
+## Session 12 — M5 partial: ADR-007 + EXP-000 smoke + EXP-001 grid (9 runs, 3 seeds)
+
+**Date:** 2026-05-02
+**Goal:** Carry out the collaborator's signed-off EXP-001 plan: write ADR-007, run EXP-000 smoke, run the 9-run EXP-001 grid, and produce a numeric summary doc with **no Outcome verdict** — verdict is to be done together.
+
+**Artefacts:**
+- `docs/adr/ADR-007-seeds-per-cell.md` — three seeds per cell for v1.00; alternatives (1, 5, asymmetric) recorded.
+- `src/signal_extraction_rnn_lstm/sdk/sdk.py` — added `torch.save(result, run_dir / 'result.pkl')` after `evaluate()` so analysis can reload rich Python ExperimentResult objects without re-running. Tests updated.
+- `docs/experiments/EXP-000-pipeline-smoke.md` — 3 kinds × 1 epoch × 1000 examples; all finite under 30 s; per-epoch ~0.03–0.08 s.
+- `docs/experiments/EXP-001-baseline-3seeds.md` — full grid: 9 runs in 88.7 s; per-cell mean ± std MSE table; LSTM-vs-RNN rel(k); RNN-vs-FC at 200 Hz; Spearman ρ = −0.4000 with one-sided p = 0.3750 (exact at N=4).
+
+**Headline numbers (no verdict):**
+- All overall test MSEs cluster around 0.50, in line with what a near-zero predictor would produce on unit-amplitude sinusoids — suggesting that with α=0.05 / β=2π, the task is too hard for these models to make appreciable progress in 30 epochs of Adam at lr=1e-3.
+- LSTM ≤ RNN ≤ FC in mean overall MSE, but per-seed std (0.0025–0.0050) makes pairwise differences small relative to observed variability.
+- LSTM-vs-RNN per-cell rel(k) values: +0.50 % / +0.17 % / +0.63 % / +0.13 % (s_1 to s_4) — none cross the 10 % threshold.
+- Spearman ρ on rel(k) is −0.40 with p=0.375 — the rel(k) values are not monotone in frequency.
+- Maximum per-cell std is 0.0143 (fc @ 2 Hz) ≈ 2.9 % of MSE scale — the 10 % threshold is ~3× the worst-cell seed-std, satisfying the § 8.3 "≥ 2× seed-std" rule of thumb without revision.
+
+**Returning to collaborator** for the Outcome A/B/C/D classification, README "Thesis evaluation" template-sentence draft, and the call on whether to launch EXP-002+ ablations given the apparent floor effect at the default α/β. **Compute budget remaining is large** — the full grid took 88.7 s wall-clock, three orders of magnitude under the 3-hour ceiling.

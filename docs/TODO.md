@@ -2,7 +2,7 @@
 
 > **Last updated:** 2026-05-02
 > **Owner:** Student (all tasks unless noted).
-> **Milestone status:** M0 complete. M1 complete. M2 complete. M3 complete. M4 complete (2026-05-02). **RETURN TO COLLABORATOR before launching EXP-001 in M5.**
+> **Milestone status:** M0–M4 complete. M5: ADR-007 written, EXP-000 smoke green, EXP-001 grid (9 runs) green; **RETURN TO COLLABORATOR for thesis-evaluation step.**
 >
 > This is the live task board. Update checkbox state as each item completes. Add sub-items inline when a task spawns unforeseen work. Do not delete completed items — history is useful for the PROMPTS log and grader.
 
@@ -199,9 +199,13 @@ All code-facing files are blocked until every item in M0 is checked and the user
 
 *Prerequisite: M4 complete.*
 
-- [ ] `EXP-001`: three-way baseline (FC / RNN / LSTM) on full dataset, 30 epochs, default config
-  - [ ] Document in `docs/experiments/EXP-001-baseline.md`
-  - [ ] Commit per-frequency MSE table to `results/`
+- [x] **ADR-007 promoted** from deferred (3 seeds per (model, frequency) cell). `docs/adr/ADR-007-seeds-per-cell.md`.
+- [x] **EXP-000 pipeline smoke** — 3 models × 1 epoch × 1000 examples; all finite, all <30 s; `docs/experiments/EXP-000-pipeline-smoke.md`.
+- [x] `EXP-001`: three-way baseline (FC / RNN / LSTM) × 3 seeds × default config, 30 epochs, full corpus. **9 runs in 88.7 s wall-clock**, all green.
+  - [x] Per-cell mean ± std MSE table — `docs/experiments/EXP-001-baseline-3seeds.md`.
+  - [x] Spearman ρ + one-sided p-value computed.
+  - [x] Per-run `result.pkl` persisted alongside `results.json` (analysis-ergonomics; SDK extension committed).
+  - [ ] **Outcome A/B/C/D verdict + README template sentences — DEFERRED to collaborator session.**
 - [ ] `EXP-002` through `EXP-004`: sensitivity sweeps (noise α, noise β, dataset size) — write ADR-007 first
 - [ ] `EXP-005`: bidirectional ablation (per § 13.1 of PRD_models.md)
 - [ ] `EXP-006`: hidden-state init scheme ablation (deferred from PRD_models.md § 13.3)

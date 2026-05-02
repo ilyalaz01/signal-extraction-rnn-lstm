@@ -30,7 +30,8 @@ def test_t_it_01_end_to_end_smoke(kind: str, tmp_path: Path) -> None:
     assert result.eval_result.overall_test_mse > 0
     assert set(result.eval_result.per_freq_mse.keys()) == {0, 1, 2, 3}
     rd = result.train_result.run_dir
-    for f in ("checkpoint_best.pt", "checkpoint_final.pt", "train.log", "results.json"):
+    for f in ("checkpoint_best.pt", "checkpoint_final.pt", "train.log",
+              "results.json", "result.pkl"):
         assert (rd / f).exists(), f"missing {f}"
 
     payload = json.loads((rd / "results.json").read_text(encoding="utf-8"))

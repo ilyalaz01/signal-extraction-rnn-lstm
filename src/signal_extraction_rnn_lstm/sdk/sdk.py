@@ -13,6 +13,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+import torch
+
 from signal_extraction_rnn_lstm.services.dataset import (
     SplitDatasets,
     build_split_datasets,
@@ -126,7 +128,9 @@ class SDK:
         tr = _train_service(model, splits, tr_cfg, run_dir, dls)
         ev = _evaluate_service(model, splits, run_dir)
         self._finalise_results_json(run_dir, spec, seed, tr, tr_cfg.epochs)
-        return ExperimentResult(spec=spec, train_result=tr, eval_result=ev)
+        result = ExperimentResult(spec=spec, train_result=tr, eval_result=ev)
+        torch.save(result, run_dir / "result.pkl")  # ADR-007: rich persistence for analysis
+        return result
 
     def run_grid(self, specs: list[ExperimentSpec]) -> list[ExperimentResult]:
         """Sequentially run a list of experiments; v1.00 has no parallelism."""

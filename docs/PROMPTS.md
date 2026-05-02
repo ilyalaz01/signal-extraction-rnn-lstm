@@ -373,3 +373,33 @@ T-TR-02 PRD spec writes "full-batch SGD"; the training service is **Adam-only** 
 - Maximum per-cell std is 0.0143 (fc @ 2 Hz) ≈ 2.9 % of MSE scale — the 10 % threshold is ~3× the worst-cell seed-std, satisfying the § 8.3 "≥ 2× seed-std" rule of thumb without revision.
 
 **Returning to collaborator** for the Outcome A/B/C/D classification, README "Thesis evaluation" template-sentence draft, and the call on whether to launch EXP-002+ ablations given the apparent floor effect at the default α/β. **Compute budget remaining is large** — the full grid took 88.7 s wall-clock, three orders of magnitude under the 3-hour ceiling.
+
+---
+
+## Session 13 — M5 expansion: EXP-002 β-sweep + EXP-003 rerun at β=π/4
+
+**Date:** 2026-05-02
+**Goal (collaborator-prescribed):** EXP-001 showed the locked default β=2π is a task-difficulty floor, not a thesis test. Plan: run a β-sweep with FC alone (EXP-002), pick the largest β with overall MSE ≤ 0.30 (`β_max_useful`), then re-run the 3×3 baseline grid at that β (EXP-003) via override only — no change to ADR-005 / PRD_signal_generation / config defaults.
+
+**Constraints honoured:**
+- Only β changed; no other hyperparameter tuned.
+- 30 epochs and patience 5 unchanged — chasing task difficulty, not convergence.
+- ADR-005 and `config/setup.json` unchanged; β=π/4 applied via `ExperimentSpec.overrides = {"signal.noise.beta": "pi/4"}` per PRD_training_evaluation § 9.4.
+- No Outcome verdict written.
+
+**Outputs:**
+- `docs/experiments/EXP-002-beta-sweep.md` — drafted as a *plan* doc first (hypothesis + sweep + acceptance gate); results section filled after the run. 6 FC runs in 62.2 s wall-clock; monotone curve; β_max_useful = π/4 with FC MSE 0.2620 (next β=π/2 jumps to 0.4299).
+- `docs/experiments/EXP-003-baseline-3seeds-beta-pi-4.md` — 3 kinds × 3 seeds = 9 runs in 109.2 s. Per-cell mean ± std table: cells span 0.17–0.32 across frequencies, with 200 Hz the *easiest* (lowest MSE for every model) and 2/10 Hz the hardest.
+
+**Headline numbers from EXP-003 (no verdict):**
+- Overall test MSE means: fc 0.2674 ± 0.0061 < lstm 0.2709 ± 0.0074 < rnn 0.2752 ± 0.0057 (FC just edges out LSTM by ~0.5σ; LSTM edges RNN by ~0.6σ).
+- LSTM-vs-RNN rel(k): all four cells show LSTM marginally better (+0.81 % to +2.48 %), none crosses the 10 % threshold.
+- Spearman ρ on rel(k) is **+0.8000**, p = 0.958 (one-sided H₁: ρ < 0). Sign is *opposite* of the lecturer's thesis at this β: the LSTM-vs-RNN advantage **grows** with frequency rather than shrinks.
+- RNN-vs-FC at 200 Hz: +3.28 % (RNN slightly worse than FC; |rel| < 10 %).
+
+**Worth flagging for the collaborator session:**
+- The MSE-vs-frequency profile at β=π/4 is *monotone-decreasing in frequency* (200 Hz easiest, 2 Hz hardest) for all three architectures. The thesis framing ("LSTM helps when within-window context is needed") presupposed the opposite difficulty profile.
+- Per-cell std at β=π/4 is up to 0.0251 (~8 % of MSE scale). The 10 % threshold's `≥ 2× seed-std` rule is now at the edge for the worst cell — your call on whether to raise it.
+- Compute remains cheap: full EXP-002 + EXP-003 = 171.4 s combined; plenty of headroom for an EXP-003.5 multi-β grid or EXP-008 parameter-matched RNN if useful.
+
+**Returning to collaborator for the revised thesis-evaluation step**, this time with two data points (EXP-002 regime curve + EXP-003 architectural comparison at β=π/4). The README's "Thesis evaluation" chapter will have two sub-sections instead of one, and that framing emerged from the data rather than from the original PRD.

@@ -1,8 +1,8 @@
 # TODO — Signal Source Extraction Study
 
-> **Last updated:** 2026-05-01
+> **Last updated:** 2026-05-02
 > **Owner:** Student (all tasks unless noted).
-> **Milestone status:** M0 in progress. M1–M7 not started.
+> **Milestone status:** M0 complete. M1 complete (committed 2026-05-02). M2a complete; M2b in progress.
 >
 > This is the live task board. Update checkbox state as each item completes. Add sub-items inline when a task spawns unforeseen work. Do not delete completed items — history is useful for the PROMPTS log and grader.
 
@@ -54,24 +54,26 @@ All code-facing files are blocked until every item in M0 is checked and the user
 
 ---
 
-## M1 — Skeleton green
+## M1 — Skeleton green ✓ complete (committed 2026-05-02)
 
 *Prerequisite: all M0 items checked and the user has said "proceed to M1".*
 
-- [ ] `uv init --package` if `pyproject.toml` absent; verify `uv.lock` committed
-- [ ] Add core dependencies: `torch`, `numpy`, `pytest`, `pytest-cov`, `ruff`
-- [ ] `.gitignore` (include `.env`, `*.pem`, `results/`, `__pycache__/`, `.venv/`)
-- [ ] `.env-example` with placeholder values (no secrets in code)
-- [ ] `src/signal_extraction_rnn_lstm/` scaffold:
-  - [ ] `__init__.py` (exports SDK, `__version__`)
-  - [ ] `constants.py`
-  - [ ] `sdk/__init__.py`, `sdk/sdk.py` (stub — signatures only, no logic)
-  - [ ] `services/__init__.py`
-  - [ ] `shared/__init__.py`, `shared/version.py`, `shared/config.py`, `shared/seeding.py`, `shared/device.py`
-- [ ] `tests/unit/`, `tests/integration/`, `tests/conftest.py` scaffolded (empty)
-- [ ] `config/setup.json` v1.00, `config/rate_limits.json` v1.00 (vestigial schema)
-- [ ] `scripts/check.sh` (runs `uv run ruff check src/ tests/` then `uv run pytest --cov=src --cov-fail-under=85`)
-- [ ] `uv run scripts/check.sh` passes on the empty scaffold (no violations, coverage trivially ≥ 85% on near-empty files)
+- [x] `uv init --package` if `pyproject.toml` absent; verify `uv.lock` committed
+- [x] Add core dependencies: `torch`, `numpy`, `pytest`, `pytest-cov`, `ruff`
+- [x] `.gitignore` (include `.env`, `*.pem`, `results/`, `__pycache__/`, `.venv/`)
+- [x] `.env-example` with placeholder values (no secrets in code)
+- [x] `src/signal_extraction_rnn_lstm/` scaffold:
+  - [x] `__init__.py` (exports SDK, `__version__`)
+  - [x] `constants.py`
+  - [x] `sdk/__init__.py`, `sdk/sdk.py` (stub — signatures only, no logic)
+  - [x] `services/__init__.py`
+  - [x] `shared/__init__.py`, `shared/version.py`, `shared/config.py`, `shared/seeding.py`, `shared/device.py`
+- [x] `tests/unit/`, `tests/integration/`, `tests/conftest.py` scaffolded (empty)
+- [x] `config/setup.json` v1.00, `config/rate_limits.json` v1.00 (vestigial schema)
+- [x] `scripts/check.sh` (runs `uv run ruff check src/ tests/` then `uv run pytest --cov=src --cov-fail-under=85`)
+- [x] `uv run scripts/check.sh` passes on the empty scaffold (no violations, coverage trivially ≥ 85% on near-empty files)
+- [x] Abstract base renamed `SignalExtractor` per PRD_models.md § 3.4
+- [x] `results/.gitkeep` removed; `results/` kept runtime-only via `.gitignore`
 
 ---
 
@@ -79,14 +81,31 @@ All code-facing files are blocked until every item in M0 is checked and the user
 
 *Prerequisite: M1 complete.*
 
-- [ ] RED: write `tests/unit/test_signal_gen.py` (all T-SG-* from PRD_signal_generation.md § 9)
-- [ ] GREEN: implement `services/signal_gen.py`
-- [ ] REFACTOR: `ruff check` clean; file ≤ 150 LOC
+### M2a — signal_gen ✓ complete (2026-05-02)
+
+- [x] RED: write `tests/unit/test_signal_gen.py` (all T-SG-01..14 from PRD_signal_generation.md § 9)
+- [x] GREEN: implement `services/signal_gen.py` (SignalConfig, Corpus, make_clean, make_noisy, generate_corpus)
+- [x] GREEN: implement `shared/config.py` (parse_angle + load_config)
+- [x] RED→GREEN: `tests/unit/test_config.py` for load_config
+- [x] REFACTOR: `ruff check` clean; signal_gen.py 103 code-LOC (excl. docstrings), 145 incl. — within ≤ 150
+- [x] Coverage 100% on signal_gen.py and shared/config.py (target ≥ 95%)
+- [x] `pyproject.toml` coverage `omit` list for not-yet-implemented stubs (re-include per milestone)
+
+### M2b — dataset (next)
+
 - [ ] RED: write `tests/unit/test_dataset.py` (all T-DS-* from PRD_dataset_construction.md § 9)
 - [ ] GREEN: implement `services/dataset.py`
 - [ ] REFACTOR: `ruff check` clean; file ≤ 100 LOC (internal target)
-- [ ] Coverage ≥ 95% on both modules
+- [ ] Coverage ≥ 95% on dataset.py
+- [ ] Remove `*/services/dataset.py` from coverage `omit`
+
+### M2c — SDK wiring + integration smoke
+
+- [ ] GREEN: `shared/seeding.py` (seed_everything)
+- [ ] GREEN: `shared/device.py` (resolve_device)
+- [ ] GREEN: SDK.__init__, SDK.generate_corpus, SDK.build_dataset
 - [ ] Integration smoke: `SDK.generate_corpus()` → `SDK.build_dataset()` → `len(splits.train)` succeeds
+- [ ] Remove the corresponding entries from coverage `omit`
 
 ---
 

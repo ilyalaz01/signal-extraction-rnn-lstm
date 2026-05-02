@@ -202,3 +202,31 @@
 - `split_strategy` field was confirmed absent from config schema; the note explaining its absence added to PLAN § 9 Notes.
 
 **Technique noted:** When a sweep touches many documents, doing the primary document (PLAN.md) first and writing all ADRs in parallel afterward is more efficient than interleaving. The "if an ADR contradicts the PRD, stop" instruction is the right safeguard — no contradictions surfaced; all ADR content was consolidation of reasoning already distributed across PRDs.
+
+---
+
+## Session 5 — M2a: signal_gen RED → GREEN
+
+**Date:** 2026-05-02
+**Goal:** TDD-cycle for the signal-generation subsystem. Produce `tests/unit/test_signal_gen.py` first (RED), get user review, then implement `services/signal_gen.py` and `shared/config.py` until all tests pass GREEN under `scripts/check.sh`.
+
+**Prompts (live):**
+1. "M2 plan: SignalConfig home decision, parse_angle strategy, make_clean/make_noisy coverage policy, commit boundaries." User approved with one addition: extra direct test T-SG-14 for `make_noisy(alpha=0, beta=0)` returning byte-identical clean.
+2. "Write `tests/unit/test_signal_gen.py` (RED phase). Show me the file before implementing services/signal_gen.py." Wrote 14 T-SG cases plus parse_angle + edge-case tests; user reviewed and approved.
+3. "Proceed to GREEN phase autonomously." Implemented `SignalConfig` (frozen dataclass with `__post_init__` validation), `Corpus`, `make_clean`, `make_noisy`, `generate_corpus`. Implemented `parse_angle` (regex-whitelist + eval) and `load_config` (json + version check) in `shared/config.py`.
+
+**Outputs:**
+- `tests/unit/test_signal_gen.py` — 137 code-LOC, 30 cases (14 T-SG + 12 parametrized property + 4 misc).
+- `tests/unit/test_config.py` — 26 code-LOC, 4 cases for load_config.
+- `src/signal_extraction_rnn_lstm/services/signal_gen.py` — 103 code-LOC excluding docstrings (target ~120, hard limit 150).
+- `src/signal_extraction_rnn_lstm/shared/config.py` — 31 code-LOC.
+- `pyproject.toml` — coverage `omit` list extended with not-yet-implemented stubs (M2b/M2c/M3/M4); will be tightened per milestone.
+
+**Key decisions locked in this session:**
+- `SignalConfig` lives in `services/signal_gen.py` (not `shared/`). `shared/config.py` returns a raw dict; the service constructs the typed config. Same pattern will repeat for `DatasetConfig`, `TrainingConfig`, `ModelConfig`.
+- `parse_angle` uses regex-whitelist as the security boundary; `eval` runs only on a verified-safe expression. Documented in the parse_angle docstring (one paragraph). No ADR needed per user's call.
+- Coverage strategy: omit unimplemented stub modules per-milestone, re-include as each ships. Avoids littering `# pragma: no cover` and keeps the threshold meaningful for actually-implemented code.
+
+**Final state:** 34 tests pass, ruff clean, coverage 100% on the 6 in-scope modules, total 100% (gated by omit list).
+
+**Technique noted:** When a TDD test file is reviewed before impl, one round of "show me the file" review is enough — afterwards, GREEN-phase coverage gaps that emerge can be filled by extending the same test file inline (e.g. extra validation cases, alternative noise distribution smoke test) without re-review, since they pin behavior already specified in the PRD.

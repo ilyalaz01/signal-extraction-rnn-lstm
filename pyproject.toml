@@ -49,6 +49,15 @@ omit = [
     "*/tests/*",
     "*/notebooks/*",
     "*/scripts/*",
+    # Stub modules awaiting their milestone — re-include each one when it
+    # ships GREEN.  See docs/TODO.md for the milestone map.
+    "*/services/dataset.py",          # M2b
+    "*/services/evaluation.py",       # M4
+    "*/services/training.py",         # M4
+    "*/services/models/*",            # M3
+    "*/shared/device.py",             # M2c
+    "*/shared/seeding.py",            # M2c
+    "*/sdk/sdk.py",                   # M2c init + M4 train/eval; treat as stub for now
 ]
 
 [tool.coverage.report]

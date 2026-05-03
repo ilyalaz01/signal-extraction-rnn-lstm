@@ -429,3 +429,73 @@ T-TR-02 PRD spec writes "full-batch SGD"; the training service is **Adam-only** 
 - Compute used so far across all M5 experiments: ~225 s. Plenty of budget left if a tighter-N seed grid or an α-sweep is wanted before the README; not pre-empting the call.
 
 **Returning to collaborator for the README narrative.** The README "Thesis evaluation" chapter now has three coherent data points: (a) regime curve (EXP-002), (b) architectural comparison at β_max_useful (EXP-003), (c) capacity-vs-gating ablation (EXP-008). All three are documented; verdict prose and the Outcome A/B/C/D call are deferred to the joint session.
+
+---
+
+## Session 15 — Pre-README audit + blocker-clearing fix block
+
+**Date:** 2026-05-03
+**Goal (collaborator-prescribed):** Before drafting README, run an adversarial self-audit and clear blockers. Two prompts: (a) generate FIG-1..4 + draft inversion-mechanism narrative, then (b) audit everything (PRDs, code, configs, experiments, figures) and triage findings.
+
+**Audit doc:** `docs/audit/AUDIT-2026-05.md` (53 checks; 41 PASS / 3 FAIL / 8 SUSPICIOUS / 1 SKIPPED). Engineering surface clean (143 → 144 tests pass, 100 % coverage, ruff clean, ≤ 150 LOC everywhere). Submission risk concentrated in narrative-correctness and one missing determinism call.
+
+**Blockers cleared:**
+
+- **F-1 / F-2 — `torch.use_deterministic_algorithms(True, warn_only=True)`** added to `shared/seeding.py::seed_everything`. PLAN.md § 11.1 / NFR-2 / PRD_training_evaluation § 5.3 now match implementation. New unit test `T-SD-04` in `tests/unit/test_seeding.py` asserts `torch.are_deterministic_algorithms_enabled()` returns True after seeding. **T-IT-02 strengthened**: same-seed runs must now produce **bit-identical state_dict tensors** (`torch.equal`, not just MSE within tolerance). Both pass on CPU at seed 7 with the tiny config (200/50/50, 2 epochs).
+- **A3 — ADR-016 disclosure as figure**: new notebook cell builds `assets/figures/fig5_t0_histograms.png` overlaying the train/val/test t₀ histograms. AC-DS-9 satisfied; the verbatim ADR-016 framing sentence is queued for the README Methodology section.
+- **A4 — TODO LOC drift fixed**: AST-stripped re-measurement (signal_gen.py 120, dataset.py 98, training.py 128, evaluation.py 71, sdk/sdk.py 115, models package 142). Updated TODO M2/M4 entries.
+- **A5 cosmetics**:
+  - `_EVAL_BATCH_SIZE = 256` literal moved to `config.runtime.eval_batch_size`; SDK threads it through to `evaluate(..., batch_size=...)`. Default (`_DEFAULT_EVAL_BATCH_SIZE = 256`) preserved for direct `evaluate()` callers.
+  - `tests/unit/test_training.py:137-140` `(tmp_path/'a').mkdir() or True` side-effect-in-conditional rewritten as explicit two-line setup.
+
+**Inversion-mechanism investigation (Block B in the notebook):** Three probes on the EXP-003 test split + seed-1337 best checkpoints:
+
+- **B1 (naive predictor floors):** the model's "easiness gap" (constant_floor − model_best) / constant_floor is **34.9 / 42.7 / 44.2 / 67.3 %** at 2/10/50/200 Hz — the inversion is real and almost 2× larger at 200 Hz than at 2 Hz.
+- **B2 (conditional Var(W_clean ∣ W_noisy) via 20-NN bins):** ratio of within-bin to global Var(target) is **77 / 68 / 74 / 56 %** at 2/10/50/200 Hz — i.e., a 10-sample noisy window most tightly constrains the 200 Hz target, least constrains the 2 Hz target.
+- **B3 (FFT distinguishability):** corpus-level (length 10 000) FFT shows all four components at peak/local-floor ≈ 40–46×; **all equally distinct in the full corpus**. Window-level (length 10) FFT is dominated by bin aliasing (bin width 100 Hz) and is not interpretable for low frequencies. **This refutes the "200 Hz is uniquely spectrally prominent" framing** I floated in the audit.
+
+**Defensible mechanism for the README (only this — no further claims):**
+> Within a 10-sample window, only the 200 Hz component completes more than a full cycle; the 2/10/50 Hz components contribute fractional-cycle slices that the 10-sample window cannot phase-localise from the noisy mixture (B2 directly measures it: Var(target ∣ input) is 56 % at 200 Hz vs ≥ 68 % at every low frequency). Recurrence does not change this because the bottleneck is **information-in-input**, not memory-over-time.
+
+**What is NOT defensible** (audit S-2 / S-3 + the falsified B3 hypothesis):
+- "2 Hz target is near-constant within a window" — Var(target) is uniformly ~0.5 across all k.
+- "Input-output Pearson correlation explains the inversion" — 10 Hz has the highest r but the highest MSE.
+- "200 Hz is uniquely spectrally distinct" — false; all four are equally above the corpus FFT floor.
+
+**FIG-6 added:** `assets/figures/fig6_spectral_distinguishability.png` — log-magnitude FFT of the noisy_sum with the four target frequencies marked.
+
+**Files touched this session:**
+- `src/signal_extraction_rnn_lstm/shared/seeding.py`, `tests/unit/test_seeding.py`, `tests/integration/test_reproducibility.py` (A1)
+- `src/signal_extraction_rnn_lstm/services/evaluation.py`, `src/signal_extraction_rnn_lstm/sdk/sdk.py`, `config/setup.json` (A5 eval_batch_size)
+- `tests/unit/test_training.py` (A5 idiom cleanup)
+- `docs/TODO.md` (A4 LOC reconciliation + M5 audit row)
+- `docs/audit/AUDIT-2026-05.md` (audit report)
+- `notebooks/results.ipynb` (FIG-5 + Section B + FIG-6)
+- `assets/figures/fig5_t0_histograms.png`, `assets/figures/fig6_spectral_distinguishability.png`
+
+**check.sh state at session end:** 144 tests pass, 100 % coverage on 603 stmts, ruff clean.
+
+**Returning to collaborator for the README draft.** Mechanism subsection now has B1/B2/B3 numbers behind it; verdict for the thesis evaluation remains Outcome C (refutation by 10 % threshold) with sign-preservation as the most-positive defensible framing. No experiments rerun.
+
+---
+
+## Session 16 — README v1.00 → v1.01 polish
+
+**Date:** 2026-05-03
+**Goal (collaborator-prescribed):** Apply seven specific corrections to README.md and bump to v1.01. No new numerical analysis.
+
+**Corrections applied:**
+
+1. **MSE inequality phrasing.** Replaced every `LSTM ≤ RNN` / `LSTM ≥ RNN` (4 hits) with explicit "LSTM's MSE is lower than RNN's" / "LSTM beats RNN" wording. The grep also caught one inverted-direction bug in § 5.3 — the line previously read "LSTM ≥ RNN at every frequency, with sign-preservation surviving parameter matching", which on a literal MSE reading would have meant LSTM is *worse*. Now reads "LSTM beats RNN at every frequency". Verified clean by `grep -n "LSTM ≤ RNN\|LSTM ≥ RNN"` returning no hits.
+2. **§ 3 AC-1 row** — added "result.pkl reload-only — the notebook does not retrain" to prevent confusion.
+3. **§ 5.2 mechanism reword** — "Even with the selector identifying which frequency to recover, the input does not contain enough phase-localising information at low frequencies for any architecture to translate that knowledge into a recovery." (Removes the misreading that the selector itself is the bottleneck.)
+4. **§ 7 fifth failed approach** — added the "PRD-locked default β = 2π and 30-epochs × 3-seeds assumption was a planning error" entry, framed as a planning failure (not a code error) discovered by EXP-001 hitting the noise floor and resolved by EXP-002.
+5. **§ 14 cost table** — removed specific session numbers (Sessions 1–8 / 9–12 / 13–14 / 15) so the reader is not forced to cross-check `PROMPTS.md`. Categorical phase descriptions retained.
+6. **§ 17 ADR claim** — replaced "ADR-001..017-*.md — eleven written ADRs" (which falsely implied contiguous numbering) with "eleven ADRs in `docs/adr/`, numbered up to ADR-017 (deferred numbers indicate ADRs planned but not required for v1.00 — see `docs/PLAN.md` § 13)".
+7. **§ 12 alignment** — the "3 audit FAILs (all fixed) / 5 failed-approaches" mismatch reworded as "3 audit BLOCKERS (F-1, F-2, F-3) all resolved before submission; the broader category of failed and abandoned approaches in § 7 covers five items including planning errors that are not separate audit FAILs".
+
+**Versioning:** README.md now carries `README version: 1.01` with a one-line changelog in the header. Code version remains `1.00` (no source changes); config version remains `1.00`.
+
+**Final check.sh state:** 144 tests pass, 100 % coverage on 603 statements, ruff clean.
+
+**Returning to collaborator for the § 16 final-checklist walkthrough.** No further edits planned before the joint compliance pass.

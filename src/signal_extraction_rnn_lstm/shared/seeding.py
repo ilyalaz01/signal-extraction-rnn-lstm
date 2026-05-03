@@ -22,9 +22,13 @@ def _check_int_seed(name: str, seed: object) -> None:
 
 
 def seed_everything(seed: int) -> None:
-    """Seed Python, NumPy, and PyTorch RNGs.
+    """Seed Python, NumPy, and PyTorch RNGs and enable deterministic algorithms.
 
     Seeds: ``random``, ``numpy.random``, ``torch`` (CPU + all CUDA devices).
+    Also calls ``torch.use_deterministic_algorithms(True, warn_only=True)`` per
+    PLAN.md § 11.1 / NFR-2 — kernels without a deterministic implementation emit
+    a warning instead of raising, preserving best-effort device-agnostic
+    determinism.
     """
     _check_int_seed("seed", seed)
     random.seed(seed)
@@ -32,6 +36,7 @@ def seed_everything(seed: int) -> None:
     torch.manual_seed(seed)
     if torch.cuda.is_available():  # pragma: no cover — CUDA not available in CI
         torch.cuda.manual_seed_all(seed)
+    torch.use_deterministic_algorithms(True, warn_only=True)
 
 
 def derive_seeds(runtime_seed: int) -> tuple[int, int, int]:

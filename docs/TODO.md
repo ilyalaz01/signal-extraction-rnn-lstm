@@ -2,7 +2,7 @@
 
 > **Last updated:** 2026-05-03
 > **Owner:** Student (all tasks unless noted).
-> **Milestone status:** M0–M4 complete. M5: ADR-007 + EXP-000 smoke + EXP-001 (β=2π floor) + EXP-002 (β sweep → β_max_useful=π/4) + EXP-003 (3×3 grid at β=π/4) + EXP-008 (RNN h=128 capacity-match at β=π/4) all green; **RETURN TO COLLABORATOR for README narrative.**
+> **Milestone status:** M0–M4 complete. M5: ADR-007 + EXP-000 smoke + EXP-001 (β=2π floor) + EXP-002 (β sweep → β_max_useful=π/4) + EXP-003 (3×3 grid at β=π/4) + EXP-008 (RNN h=128 capacity-match at β=π/4) all green. **Audit-2026-05 complete (`docs/audit/AUDIT-2026-05.md`) — blockers cleared; inversion-mechanism investigation (Block B in `notebooks/results.ipynb`) complete.** RETURN TO COLLABORATOR for README narrative.
 >
 > This is the live task board. Update checkbox state as each item completes. Add sub-items inline when a task spawns unforeseen work. Do not delete completed items — history is useful for the PROMPTS log and grader.
 
@@ -87,7 +87,7 @@ All code-facing files are blocked until every item in M0 is checked and the user
 - [x] GREEN: implement `services/signal_gen.py` (SignalConfig, Corpus, make_clean, make_noisy, generate_corpus)
 - [x] GREEN: implement `shared/config.py` (parse_angle + load_config)
 - [x] RED→GREEN: `tests/unit/test_config.py` for load_config
-- [x] REFACTOR: `ruff check` clean; signal_gen.py 103 code-LOC (excl. docstrings), 145 incl. — within ≤ 150
+- [x] REFACTOR: `ruff check` clean; signal_gen.py **120 code-LOC** (AST-stripped, audit-2026-05); within ≤ 150
 - [x] Coverage 100% on signal_gen.py and shared/config.py (target ≥ 95%)
 - [x] `pyproject.toml` coverage `omit` list for not-yet-implemented stubs (re-include per milestone)
 
@@ -95,7 +95,7 @@ All code-facing files are blocked until every item in M0 is checked and the user
 
 - [x] RED: write `tests/unit/test_dataset.py` (all T-DS-04..18 + edge cases; T-DS-01..03 retired in PRD v1.01; T-DS-11' replaces T-DS-11)
 - [x] GREEN: implement `services/dataset.py` (DatasetConfig, WindowExample, WindowDataset, SplitDatasets, build_split_datasets)
-- [x] REFACTOR: `ruff check` clean; dataset.py 91 code-LOC (target ~100)
+- [x] REFACTOR: `ruff check` clean; dataset.py **98 code-LOC** (AST-stripped, audit-2026-05; target ~100)
 - [x] Coverage 100% on dataset.py (target ≥ 95%)
 - [x] Removed `*/services/dataset.py` from coverage `omit`
 - [x] Spec deviation noted: `WindowExample` is `NamedTuple` (PRD said `@dataclass(frozen=True)`); chosen for `default_collate` compat. Logged in PROMPTS § 6.
@@ -164,7 +164,7 @@ All code-facing files are blocked until every item in M0 is checked and the user
 ### M4a — training service ✓ complete (2026-05-02)
 
 - [x] RED→GREEN: `tests/unit/test_training.py` (T-TR-01..08, T-TR-11 + extra coverage)
-- [x] GREEN: `services/training.py` (TrainingConfig, EpochResult, TrainingResult, parse_training_config, _early_stop_index, train) — 128 code-LOC (target ~115, hard 140)
+- [x] GREEN: `services/training.py` (TrainingConfig, EpochResult, TrainingResult, parse_training_config, _early_stop_index, train) — **128 code-LOC** (AST-stripped, audit-2026-05; target ~115, hard 140)
 - [x] GREEN: `shared/config.py` extended with `apply_overrides(cfg, overrides)`; T-TR-09 lives in `tests/unit/test_config.py`
 - [x] GREEN: `shared/seeding.py` `derive_seeds` extended to 3-tuple `(corpus, sampling, dataloader)` per PRD_training_evaluation § 5.2; SDK + tests updated
 - [x] T-TR-02 calibration: PRD spec is "full-batch SGD"; training service is Adam-only by design (PRD § 4.1) — used Adam; intent (loss substantially reduced on tiny set) preserved. PROMPTS § 10 logs the choice.
@@ -190,8 +190,8 @@ All code-facing files are blocked until every item in M0 is checked and the user
 
 ### M4 final state
 
-- 143 tests pass, ruff clean, coverage 100% on all 19 in-scope modules (595/595 stmts).
-- LOC: training.py 128 (hard 140), evaluation.py 69 (hard 130), sdk/sdk.py 108 (PRD allowed 120 total), test files all ≤ 150.
+- 143 tests pass, ruff clean, coverage 100% on all 19 in-scope modules (598/598 stmts; updated count from audit-2026-05).
+- LOC (AST-stripped, audit-2026-05): signal_gen.py 120, dataset.py 98, training.py 128 (hard 140), evaluation.py 71 (hard 130), sdk/sdk.py 115 (PRD allowed 120 total), shared/config.py 47, models package 142 total (init 33 + base 13 + fc 31 + rnn 33 + lstm 32). Test files all ≤ 144 (max: tests/unit/test_training.py).
 
 ---
 
@@ -222,8 +222,22 @@ All code-facing files are blocked until every item in M0 is checked and the user
 - [ ] `EXP-007`: sequence-to-sequence head ablation
 - [ ] `EXP-008`: parameter-matched RNN (hidden ≈ 128) vs LSTM (hidden 64)
 - [ ] Write deferred ADRs triggered by EXP-001: ADR-006 (device), ADR-007 (seeds per cell)
-- [ ] `notebooks/results.ipynb`: loss curves, per-frequency MSE, FC-vs-RNN-vs-LSTM comparison plots
-- [ ] Figures committed to `assets/figures/`
+- [~] `notebooks/results.ipynb` (in progress, M6): single source of truth for figures + Block B mechanism investigation.
+  - [x] Scaffold + summary loaders for EXP-002 / EXP-003 / EXP-008.
+  - [x] FIG-1 β-sweep (`assets/figures/fig1_beta_sweep.png`).
+  - [x] FIG-2 per-frequency MSE bars at β=π/4 (`assets/figures/fig2_per_freq_mse.png`).
+  - [x] FIG-3 LSTM-vs-RNN relative advantage, EXP-003 + EXP-008 overlay (`assets/figures/fig3_lstm_advantage.png`).
+  - [x] FIG-4 qualitative reconstructions, seed=1337 best checkpoints (`assets/figures/fig4_qualitative.png`).
+  - [x] FIG-5 t₀ histograms across splits (`assets/figures/fig5_t0_histograms.png`) — AC-DS-9.
+  - [x] Section B inversion-mechanism investigation (B1 naive predictors, B2 conditional Var, B3 spectral) + B4 synthesis + FIG-6 spectral distinguishability.
+  - [ ] Loss-curve cell (deferred to README pass — pull from `result.pkl` train_history).
+  - [ ] AC-DS-5 dataset-example cell.
+- [x] Audit-2026-05 (`docs/audit/AUDIT-2026-05.md`) — 53 checks; 4 blockers cleared (F-1/F-2 determinism + S-6/S-7 verdict framing for README).
+- [x] F-1 fix: `torch.use_deterministic_algorithms(True, warn_only=True)` in `shared/seeding.py`; T-SD-04 added.
+- [x] F-2 fix: T-IT-02 strengthened to assert bit-identical `state_dict` tensors (`torch.equal`).
+- [x] F-3 fix: TODO LOC counts reconciled with AST measurement (this section + M2/M4).
+- [x] A5 cosmetics: `_EVAL_BATCH_SIZE` moved to `config.runtime.eval_batch_size`; `or True` idiom in `tests/unit/test_training.py:137-140` cleaned up.
+- [x] Figures committed to `assets/figures/` (6 of N — FIG-1..6).
 - [ ] `AC-DS-9` (t_0-histogram figure) and `AC-DS-5` (dataset example figure) delivered here
 
 ---
@@ -232,13 +246,14 @@ All code-facing files are blocked until every item in M0 is checked and the user
 
 *Prerequisite: M5 complete.*
 
-- [ ] `README.md` as full research narrative + user manual (per guidelines § 1.1 and HOMEWORK_BRIEF.md § 10.2)
-  - [ ] Installation instructions (uv-based)
-  - [ ] Screenshots of signals, loss curves, error plots, architecture diagrams
-  - [ ] Comparative analysis section: when each architecture wins, why, what breaks
-  - [ ] Failed experiments included
-  - [ ] Framing sentence from ADR-016 reproduced verbatim (AC-DS-9 requirement)
-- [ ] `notebooks/results.ipynb` polished and narrative-complete
+- [x] `README.md` v1.01 (697 lines) — full research narrative + user manual; collaborator-reviewed and polished (audit + 7-correction pass).
+  - [x] Installation / quick-start (uv-based) — § 2.
+  - [x] Six committed figures (FIG-1..6) embedded with captions — §§ 4–5.
+  - [x] Comparative analysis (Outcome C verdict + B-investigation mechanism) — §§ 5.2 / 5.5.
+  - [x] Failed and abandoned approaches including planning errors — § 7.
+  - [x] ADR-016 framing sentence reproduced verbatim (AC-DS-9) — § 4.2.
+  - [x] ISO/IEC 25010 mapping, extension points, cost & token analysis — §§ 11 / 13 / 14.
+- [~] `notebooks/results.ipynb` polished and narrative-complete (FIG-1..4 done in M5; loss-curve / AC-DS-* cells pending)
 - [ ] All acceptance criteria (AC-*) verified across all PRDs
 
 ---

@@ -50,3 +50,16 @@ def test_derive_seeds_returns_three_distinct_ints() -> None:
 def test_derive_seeds_rejects_none() -> None:
     with pytest.raises(TypeError):
         derive_seeds(None)  # type: ignore[arg-type]
+
+
+def test_t_sd_04_deterministic_algorithms_enabled() -> None:
+    """T-SD-04: seed_everything must enable PyTorch deterministic kernels.
+
+    Pinned because PLAN.md § 11.1 / NFR-2 / PRD_training_evaluation § 5.3 all
+    depend on this flag being on.  ``warn_only=True`` lets non-deterministic
+    kernels fall back with a warning, which is the documented best-effort mode.
+    """
+    torch.use_deterministic_algorithms(False)
+    assert torch.are_deterministic_algorithms_enabled() is False
+    seed_everything(0)
+    assert torch.are_deterministic_algorithms_enabled() is True

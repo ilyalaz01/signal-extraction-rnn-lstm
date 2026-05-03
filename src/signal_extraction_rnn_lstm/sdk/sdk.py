@@ -109,7 +109,8 @@ class SDK:
         """Evaluate ``trained.model`` on ``datasets.test``; results.json written
         to ``trained.run_dir`` (without spec/training keys — call
         ``run_experiment`` if you need the full schema)."""
-        return _evaluate_service(trained.model, datasets, trained.run_dir)
+        return _evaluate_service(trained.model, datasets, trained.run_dir,
+                                 batch_size=self._eval_batch_size())
 
     def run_experiment(self, spec: ExperimentSpec) -> ExperimentResult:
         """Apply overrides, train, evaluate, and finalise results.json."""
@@ -126,7 +127,8 @@ class SDK:
         run_dir = self._make_run_dir(spec.model_kind, seed)
         model = build(spec.model_kind, m_cfg)
         tr = _train_service(model, splits, tr_cfg, run_dir, dls)
-        ev = _evaluate_service(model, splits, run_dir)
+        ev_bs = int(cfg["runtime"].get("eval_batch_size", 256))
+        ev = _evaluate_service(model, splits, run_dir, batch_size=ev_bs)
         self._finalise_results_json(run_dir, spec, seed, tr, tr_cfg.epochs)
         result = ExperimentResult(spec=spec, train_result=tr, eval_result=ev)
         torch.save(result, run_dir / "result.pkl")  # ADR-007: rich persistence for analysis
@@ -135,6 +137,9 @@ class SDK:
     def run_grid(self, specs: list[ExperimentSpec]) -> list[ExperimentResult]:
         """Sequentially run a list of experiments; v1.00 has no parallelism."""
         return [self.run_experiment(s) for s in specs]
+
+    def _eval_batch_size(self) -> int:
+        return int(self._config["runtime"].get("eval_batch_size", 256))
 
     def _make_run_dir(self, model_kind: str, seed: int) -> Path:
         ts = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")

@@ -25,7 +25,7 @@ from signal_extraction_rnn_lstm.services.dataset import SplitDatasets
 from signal_extraction_rnn_lstm.services.models.base import SignalExtractor
 
 _RESULTS_VERSION = "1.00"
-_EVAL_BATCH_SIZE = 256
+_DEFAULT_EVAL_BATCH_SIZE = 256  # used only if caller does not supply one
 
 
 @dataclass(frozen=True)
@@ -49,17 +49,21 @@ class EvalResult:
                 for k in self.per_freq_mse}
 
 
-def evaluate(model: SignalExtractor, datasets: SplitDatasets, run_dir: Path) -> EvalResult:
+def evaluate(model: SignalExtractor, datasets: SplitDatasets, run_dir: Path,
+             *, batch_size: int | None = None) -> EvalResult:
     """Evaluate ``model`` on ``datasets.test`` and write ``results.json``.
 
     Sets the model to ``eval()`` mode for the computation and restores its
     prior ``training`` flag on exit (PRD § 13).  ``no_grad`` context is used
-    around the forward pass.
+    around the forward pass.  ``batch_size`` defaults to
+    ``_DEFAULT_EVAL_BATCH_SIZE`` if the caller does not pass one — the SDK
+    threads ``config.runtime.eval_batch_size`` through.
     """
     was_training = model.training
     model.eval()
+    bs = int(batch_size) if batch_size is not None else _DEFAULT_EVAL_BATCH_SIZE
     try:
-        test_dl = DataLoader(datasets.test, batch_size=_EVAL_BATCH_SIZE,
+        test_dl = DataLoader(datasets.test, batch_size=bs,
                              shuffle=False, num_workers=0)
         preds, targets, ks = [], [], []
         with torch.no_grad():

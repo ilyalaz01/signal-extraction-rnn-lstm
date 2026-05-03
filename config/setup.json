@@ -3,6 +3,7 @@
   "runtime": {
     "device": "auto",
     "seed": 1337,
+    "eval_batch_size": 256,
     "dataloader": { "num_workers": 0 }
   },
   "signal": {

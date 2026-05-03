@@ -1,9 +1,18 @@
-"""T-IT-02: same spec + same seed → identical train_history and overall_test_mse."""
+"""T-IT-02: same spec + same seed → bit-identical state_dict + identical metrics.
+
+The bit-identical state_dict assertion (per audit AUDIT-2026-05 fix A1) is
+strictly stronger than MSE-tolerance equality and only holds when
+``torch.use_deterministic_algorithms(True, warn_only=True)`` is active —
+which ``shared.seeding.seed_everything`` now enables (T-SD-04 in
+``tests/unit/test_seeding.py``).
+"""
 
 from __future__ import annotations
 
 import math
 from pathlib import Path
+
+import torch
 
 from signal_extraction_rnn_lstm.sdk import SDK
 from signal_extraction_rnn_lstm.sdk.sdk import ExperimentSpec
@@ -26,3 +35,10 @@ def test_t_it_02_reproducibility_same_seed(tmp_path: Path) -> None:
 
     assert math.isclose(a.eval_result.overall_test_mse, b.eval_result.overall_test_mse,
                         rel_tol=1e-7, abs_tol=1e-9)
+
+    # Stronger: best-checkpoint weights must be bit-identical.
+    sa = a.train_result.model.state_dict()
+    sb = b.train_result.model.state_dict()
+    assert sa.keys() == sb.keys()
+    for k in sa:
+        assert torch.equal(sa[k], sb[k]), f"weights diverge at {k!r}"

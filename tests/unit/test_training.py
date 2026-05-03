@@ -134,11 +134,11 @@ def test_t_tr_04_05_06_07_checkpoints_history_log(small_splits: SplitDatasets,
 
 
 def test_t_tr_08_determinism(small_splits: SplitDatasets, tmp_path: Path) -> None:
-    a = train(_fresh_model(), small_splits, _train_cfg(epochs=3),
-              tmp_path / "a", dataloader_seed=0) if (tmp_path / "a").mkdir() or True else None
-    b = train(_fresh_model(), small_splits, _train_cfg(epochs=3),
-              tmp_path / "b", dataloader_seed=0) if (tmp_path / "b").mkdir() or True else None
-    assert a is not None and b is not None
+    dir_a, dir_b = tmp_path / "a", tmp_path / "b"
+    dir_a.mkdir()
+    dir_b.mkdir()
+    a = train(_fresh_model(), small_splits, _train_cfg(epochs=3), dir_a, dataloader_seed=0)
+    b = train(_fresh_model(), small_splits, _train_cfg(epochs=3), dir_b, dataloader_seed=0)
     for ea, eb in zip(a.train_history, b.train_history, strict=True):
         assert math.isclose(ea.train_mse, eb.train_mse, rel_tol=1e-6)
         assert math.isclose(ea.val_mse, eb.val_mse, rel_tol=1e-6)

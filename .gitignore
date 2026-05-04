@@ -31,3 +31,7 @@ results/
 
 # macOS
 .DS_Store
+
+# website artifacts (sub-deliverable, not part of v1.00 submission)
+website/node_modules/
+website/.vercel/

@@ -1,0 +1,829 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Signal Source Extraction — A neural network study (and what it didn't confirm)</title>
+  <meta name="description" content="A comparative study of FC, RNN and LSTM on a conditional source-separation task. The lecturer's thesis was not confirmed — and we measured why." />
+  <meta name="color-scheme" content="dark" />
+
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" integrity="sha384-nB0miv6/jRmo5UMMR1wu3Gz6NLsoTkbqJghGIsx//Rlm+ZU03BU6SQNC66uf4l5+" crossorigin="anonymous" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700&display=swap" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><path d='M2 32 Q 16 4, 32 32 T 62 32' stroke='%2306b6d4' stroke-width='4' fill='none' /></svg>" />
+</head>
+<body>
+  <a href="#main" class="skip-link">Skip to main content</a>
+
+  <nav class="topnav" aria-label="Primary">
+    <a class="brand" href="#top">
+      <svg width="22" height="22" viewBox="0 0 64 64" aria-hidden="true"><path d="M2 32 Q 16 4, 32 32 T 62 32" stroke="currentColor" stroke-width="5" fill="none" stroke-linecap="round" /></svg>
+      <span>signal-extraction</span>
+    </a>
+    <ul class="topnav-links">
+      <li><a href="#task">Task</a></li>
+      <li><a href="#models">Models</a></li>
+      <li><a href="#experiments">Experiments</a></li>
+      <li><a href="#verdict">Verdict</a></li>
+      <li><a href="#followup">Follow-up</a></li>
+      <li><a href="#hebrew" lang="he">עברית</a></li>
+      <li><a href="#explore">Explore</a></li>
+    </ul>
+  </nav>
+
+  <main id="main">
+
+    <!-- ============ HERO ============ -->
+    <section class="hero" id="top">
+      <canvas id="hero-canvas" aria-hidden="true"></canvas>
+      <div class="hero-grain" aria-hidden="true"></div>
+      <div class="hero-inner">
+        <div class="kicker">research notebook · v1.00</div>
+        <h1 class="title">
+          Signal Source<br />
+          <span class="title-accent">Extraction</span>
+        </h1>
+        <p class="subtitle">
+          A neural-network study that <em>didn't</em> confirm the lecturer's thesis —
+          and why that's actually a stronger result.
+        </p>
+        <p class="lede">
+          Three architectures, four sine waves, ten samples.<br />
+          We measured why some tasks can't be solved no matter how good your model is.
+        </p>
+        <div class="stat-row">
+          <div class="stat">
+            <div class="stat-num">144</div>
+            <div class="stat-label">tests · 100% coverage</div>
+          </div>
+          <div class="stat">
+            <div class="stat-num">5</div>
+            <div class="stat-label">experiments · 18 training runs</div>
+          </div>
+          <div class="stat">
+            <div class="stat-num">12</div>
+            <div class="stat-label">ADRs · 698-line README</div>
+          </div>
+        </div>
+        <a class="scroll-down" href="#task" aria-label="Scroll to first section">
+          <span></span>
+        </a>
+      </div>
+    </section>
+
+    <!-- ============ TASK ============ -->
+    <section class="section" id="task">
+      <div class="container">
+        <p class="section-num">01</p>
+        <h2>What we were asked to do</h2>
+        <p class="lead">
+          Take four pure sine waves of different frequencies. Add them together. Add noise to
+          the phase of each one. Then, given a small ten-sample window of that noisy sum and a
+          one-hot vector saying <em>which</em> sine you want, recover the corresponding clean window.
+        </p>
+
+        <div class="task-grid">
+          <div class="task-text">
+            <h3>The signal</h3>
+            <p>Four sinusoids at <strong>2 Hz, 10 Hz, 50 Hz, 200 Hz</strong>, sampled at 1 kHz for 10 seconds. Each one gets a small amplitude perturbation (5%) and a configurable phase perturbation <span class="m">β</span>. They're summed component-by-component; the model sees the noisy sum.</p>
+
+            <h3>The window</h3>
+            <p>Only <strong>ten consecutive samples</strong> of the noisy sum (10 ms) are visible. Plus a one-hot selector. The model outputs ten samples — the predicted clean window for the chosen sinusoid.</p>
+
+            <h3>The architectures</h3>
+            <p>A fully-connected baseline, a vanilla RNN, and an LSTM. Same input information rate; different inductive biases. The selector is broadcast to every recurrent timestep so the three models are comparable.</p>
+
+            <div class="callout">
+              <div class="callout-tag">the lecturer's thesis</div>
+              <div>RNNs have short memory and should win on <em>high-frequency</em> components. LSTMs have long memory and should win on <em>low-frequency</em> components. We pre-registered this hypothesis with a 10% practical-significance threshold and a Spearman rank test.</div>
+              <p class="followup-note small"><span class="followup-marker">↳ personal follow-up</span> A post-submission GPU continuation tested this prediction at window=100–2000 with fair architectural treatment. The thesis holds <em>in a middle band</em> only (window 100–500), not monotonically. <a href="#followup">See § Beyond the submission ↓</a></p>
+            </div>
+          </div>
+
+          <aside class="task-diagram" aria-label="Task diagram">
+            <svg viewBox="0 0 400 320" role="img" aria-labelledby="taskdiag-title">
+              <title id="taskdiag-title">Four clean sines summed and perturbed, one window extracted</title>
+              <defs>
+                <linearGradient id="lg" x1="0" x2="1">
+                  <stop offset="0%" stop-color="#06b6d4" stop-opacity="0.0"/>
+                  <stop offset="50%" stop-color="#06b6d4" stop-opacity="0.7"/>
+                  <stop offset="100%" stop-color="#06b6d4" stop-opacity="0.0"/>
+                </linearGradient>
+              </defs>
+              <g class="dgm-stack">
+                <text x="0" y="20" class="dgm-label">s₁ (2 Hz)</text>
+                <path d="M70 20 Q 100 10 200 20 T 380 20" />
+                <text x="0" y="60" class="dgm-label">s₂ (10 Hz)</text>
+                <path d="M70 60 q 10 -12 20 0 t 20 0 t 20 0 t 20 0 t 20 0 t 20 0 t 20 0 t 20 0 t 20 0 t 20 0 t 20 0 t 20 0 t 20 0 t 20 0 t 20 0 t 20 0" />
+                <text x="0" y="100" class="dgm-label">s₃ (50 Hz)</text>
+                <path d="M70 100 q 4 -10 8 0 t 8 0 t 8 0 t 8 0 t 8 0 t 8 0 t 8 0 t 8 0 t 8 0 t 8 0 t 8 0 t 8 0 t 8 0 t 8 0 t 8 0 t 8 0 t 8 0 t 8 0 t 8 0 t 8 0 t 8 0 t 8 0 t 8 0 t 8 0 t 8 0 t 8 0 t 8 0 t 8 0 t 8 0 t 8 0 t 8 0 t 8 0 t 8 0 t 8 0 t 8 0 t 8 0 t 8 0 t 8 0" />
+                <text x="0" y="140" class="dgm-label">s₄ (200 Hz)</text>
+                <path d="M70 140 q 1.5 -8 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0 t 3 0" />
+              </g>
+              <g transform="translate(0,180)">
+                <text x="0" y="20" class="dgm-label dgm-emph">noisy sum S̃</text>
+                <path d="M70 20 q 6 -18 12 -2 t 12 12 t 12 -16 t 12 8 t 12 -10 t 12 14 t 12 -8 t 12 4 t 12 -16 t 12 12 t 12 -10 t 12 14 t 12 -8 t 12 6 t 12 -12 t 12 8 t 12 -14 t 12 10 t 12 -6 t 12 12 t 12 -16 t 12 8 t 12 -10 t 12 14" class="dgm-emph-path" />
+                <rect x="170" y="-2" width="50" height="44" class="dgm-window" />
+                <text x="195" y="60" text-anchor="middle" class="dgm-label dgm-window-label">10-sample window</text>
+              </g>
+              <g transform="translate(0,272)">
+                <line x1="195" y1="-30" x2="195" y2="-6" class="dgm-arrow" />
+                <text x="200" y="14" class="dgm-label dgm-emph">→ predict W_clean</text>
+              </g>
+            </svg>
+          </aside>
+        </div>
+
+        <!-- WIDGET: signal explorer -->
+        <div class="widget" aria-labelledby="explorer-h">
+          <div class="widget-head">
+            <h3 id="explorer-h">Try it: build the signal yourself</h3>
+            <p class="muted">Toggle which sines are mixed in. Each one draws in its own color; the cyan line on top is the noisy sum the model actually sees. Drag the slider to crank up phase noise.</p>
+          </div>
+          <ul class="freq-legend" aria-label="Frequency legend">
+            <li><span class="sw" style="--c:#a78bfa"></span><strong>2 Hz</strong><span class="muted small">period 500 samples · 0.02 cycle in window</span></li>
+            <li><span class="sw" style="--c:#f59e0b"></span><strong>10 Hz</strong><span class="muted small">period 100 samples · 0.10 cycle in window</span></li>
+            <li><span class="sw" style="--c:#86efac"></span><strong>50 Hz</strong><span class="muted small">period 20 samples · 0.50 cycle in window</span></li>
+            <li><span class="sw" style="--c:#fb7185"></span><strong>200 Hz</strong><span class="muted small">period 5 samples · 2.00 cycles in window</span></li>
+            <li class="legend-sum"><span class="sw" style="--c:#06b6d4"></span><strong>noisy sum</strong><span class="muted small">the model's only input</span></li>
+          </ul>
+          <canvas id="explorer-canvas" height="220"></canvas>
+          <div class="widget-controls">
+            <fieldset class="freq-toggles">
+              <legend class="visually-hidden">Frequencies to include</legend>
+              <label class="chip" data-freq="2"><input type="checkbox" checked /><span>2 Hz</span></label>
+              <label class="chip" data-freq="10"><input type="checkbox" checked /><span>10 Hz</span></label>
+              <label class="chip" data-freq="50"><input type="checkbox" checked /><span>50 Hz</span></label>
+              <label class="chip" data-freq="200"><input type="checkbox" checked /><span>200 Hz</span></label>
+            </fieldset>
+            <div class="slider-block">
+              <label for="beta-slider">phase noise β <span class="mono" id="beta-readout">π/4</span></label>
+              <input type="range" id="beta-slider" min="0" max="100" value="13" />
+              <div class="slider-marks">
+                <span>0</span><span>π/8</span><span class="mark-active">π/4</span><span>π/2</span><span>π</span><span>2π</span>
+              </div>
+            </div>
+          </div>
+          <p class="widget-foot mono" id="explorer-readout">
+            β ≈ π/4 — the operating point we chose for our experiments. Task is hard but solvable.
+          </p>
+        </div>
+
+        <!-- WIDGET: phase recovery challenge (static) -->
+        <div class="phase-card" aria-labelledby="phase-h">
+          <h4 id="phase-h">Phase recovery challenge</h4>
+          <p class="muted small">Why high frequencies are easier in our experiments — visualised at a window length of 10 samples.</p>
+          <div class="phase-pair">
+            <div class="phase-cell">
+              <svg viewBox="0 0 200 90" role="img" aria-label="Two full cycles of a 200 Hz sine in a 10-sample window">
+                <line x1="0" y1="45" x2="200" y2="45" class="phase-axis" />
+                <path d="M0 45 Q 12.5 5 25 45 T 50 45 T 75 45 T 100 45 T 125 45 T 150 45 T 175 45 T 200 45" class="phase-curve phase-hi" />
+                <g class="phase-dots">
+                  <circle cx="0" cy="45" r="2.4" /><circle cx="22" cy="6" r="2.4" /><circle cx="44" cy="44" r="2.4" />
+                  <circle cx="66" cy="84" r="2.4" /><circle cx="88" cy="46" r="2.4" /><circle cx="111" cy="6" r="2.4" />
+                  <circle cx="133" cy="44" r="2.4" /><circle cx="155" cy="84" r="2.4" /><circle cx="177" cy="46" r="2.4" />
+                  <circle cx="200" cy="45" r="2.4" />
+                </g>
+              </svg>
+              <p class="phase-cap"><strong>200 Hz</strong> — full cycles fit; phase locatable.</p>
+            </div>
+            <div class="phase-cell">
+              <svg viewBox="0 0 200 90" role="img" aria-label="A 2 Hz sine in a 10-sample window covers only 0.02 of a cycle and looks nearly linear">
+                <line x1="0" y1="45" x2="200" y2="45" class="phase-axis" />
+                <path d="M0 47 L 200 41" class="phase-curve phase-lo" />
+                <g class="phase-dots">
+                  <circle cx="0" cy="47" r="2.4" /><circle cx="22" cy="46.3" r="2.4" /><circle cx="44" cy="45.7" r="2.4" />
+                  <circle cx="66" cy="45" r="2.4" /><circle cx="88" cy="44.3" r="2.4" /><circle cx="111" cy="43.7" r="2.4" />
+                  <circle cx="133" cy="43" r="2.4" /><circle cx="155" cy="42.3" r="2.4" /><circle cx="177" cy="41.7" r="2.4" />
+                  <circle cx="200" cy="41" r="2.4" />
+                </g>
+              </svg>
+              <p class="phase-cap"><strong>2 Hz</strong> — flat slope; phase ambiguous.</p>
+            </div>
+          </div>
+          <p class="phase-foot muted small">This is why high frequencies are easier in our experiments. Same architecture, same training — different information content in the input.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ MODELS ============ -->
+    <section class="section section-alt" id="models">
+      <div class="container">
+        <p class="section-num">02</p>
+        <h2>The three architectures</h2>
+        <p class="lead">Four model variants, one input contract. Three primary architectures (FC, RNN, LSTM) plus a parameter-matched RNN used as a capacity control in EXP-008.</p>
+
+        <div class="models-grid">
+          <article class="model-card model-fc">
+            <div class="model-tag">FC</div>
+            <h3>Fully connected baseline</h3>
+            <p class="muted small">Input <span class="mono">(B, 14)</span> — concat of selector + window.</p>
+<pre class="model-arch mono">Input (B, 14)
+   │
+   ▼
+Linear 14 → 64
+   │  ReLU
+   ▼
+Linear 64 → 64
+   │  ReLU
+   ▼
+Linear 64 → 10
+   │
+   ▼
+Output (B, 10)</pre>
+            <ul class="kv">
+              <li><span>parameters</span><span class="mono">~5,770</span></li>
+              <li><span>role</span><span>non-temporal baseline</span></li>
+            </ul>
+          </article>
+
+          <article class="model-card model-rnn">
+            <div class="model-tag">RNN</div>
+            <h3>Vanilla RNN, h = 64</h3>
+            <p class="muted small">Input <span class="mono">(B, 10, 5)</span> — selector broadcast onto every timestep.</p>
+<pre class="model-arch mono">Input (B, 10, 5)
+   │
+   ▼
+nn.RNN h=64
+   │  tanh, 1 layer
+   ▼
+take last timestep
+   │
+   ▼
+Linear 64 → 10
+   │
+   ▼
+Output (B, 10)</pre>
+            <ul class="kv">
+              <li><span>parameters</span><span class="mono">~5,194</span></li>
+              <li><span>role</span><span>simple recurrent · the lecturer's "high-freq favorite"</span></li>
+            </ul>
+          </article>
+
+          <article class="model-card model-lstm">
+            <div class="model-tag">LSTM</div>
+            <h3>LSTM, h = 64</h3>
+            <p class="muted small">Same input shape as RNN.</p>
+<pre class="model-arch mono">Input (B, 10, 5)
+   │
+   ▼
+nn.LSTM h=64
+   │  gated, 1 layer
+   ▼
+take last timestep
+   │
+   ▼
+Linear 64 → 10
+   │
+   ▼
+Output (B, 10)</pre>
+            <ul class="kv">
+              <li><span>parameters</span><span class="mono">~18,826</span></li>
+              <li><span>role</span><span>gated recurrent · the lecturer's "low-freq favorite"</span></li>
+            </ul>
+          </article>
+
+          <article class="model-card model-rnn128">
+            <div class="model-tag">RNN-128</div>
+            <h3>RNN, h = 128 (param-matched)</h3>
+            <p class="muted small">Identical to the RNN above except hidden size is doubled.</p>
+<pre class="model-arch mono">Input (B, 10, 5)
+   │
+   ▼
+nn.RNN h=128
+   │  tanh, 1 layer
+   ▼
+take last timestep
+   │
+   ▼
+Linear 128 → 10
+   │
+   ▼
+Output (B, 10)</pre>
+            <ul class="kv">
+              <li><span>parameters</span><span class="mono">~18,570 (98.6% of LSTM)</span></li>
+              <li><span>role</span><span>capacity control · EXP-008</span></li>
+            </ul>
+          </article>
+        </div>
+
+        <p class="models-foot">
+          All three primary models (FC, RNN, LSTM) share the same input contract: a 4-dimensional one-hot selector identifying which sine to extract, plus a 10-sample window of the noisy mixture. The selector is concatenated with the input directly for FC, and broadcast onto every timestep for RNN and LSTM. This keeps the comparison apples-to-apples — every architecture sees the same information at the same rate.
+        </p>
+      </div>
+    </section>
+
+    <!-- ============ METHODOLOGY ============ -->
+    <section class="section" id="methodology">
+      <div class="container">
+        <p class="section-num">03</p>
+        <h2>How we built it</h2>
+        <p class="lead">Three commitments shaped the project from before it had a single line of Python.</p>
+
+        <div class="cards-3">
+          <article class="card">
+            <div class="card-tag">A</div>
+            <h3>Documents before code</h3>
+            <p>Six formal specs and twelve architectural decision records were written and approved before any <code>.py</code> file existed — per Dr. Segal's guidelines § 1.5.</p>
+            <pre class="tree mono">docs/
+├── PRD.md
+├── PLAN.md
+├── TODO.md
+├── PRD_signal_generation.md
+├── PRD_dataset_construction.md
+├── PRD_models.md
+├── PRD_training_evaluation.md
+└── adr/
+    ├── ADR-001-gatekeeper-na.md
+    ├── ADR-003-selector-broadcast.md
+    ├── ADR-016-random-sampling-stationary.md
+    └── ... (12 total)</pre>
+          </article>
+
+          <article class="card">
+            <div class="card-tag">B</div>
+            <h3>Test-driven development</h3>
+            <p>Every module had a failing test before it had an implementation. The full RED → GREEN → REFACTOR loop, no exceptions.</p>
+            <div class="rgr">
+              <span class="rgr-r">RED</span>
+              <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M2 7h10M8 3l4 4-4 4" stroke="currentColor" fill="none" stroke-width="2" /></svg>
+              <span class="rgr-g">GREEN</span>
+              <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M2 7h10M8 3l4 4-4 4" stroke="currentColor" fill="none" stroke-width="2" /></svg>
+              <span class="rgr-b">REFACTOR</span>
+            </div>
+            <ul class="kv">
+              <li><span>Tests</span><span class="mono">144 (130 unit + 14 integration)</span></li>
+              <li><span>Coverage</span><span class="mono">100% (603 / 603)</span></li>
+              <li><span>Linter</span><span class="mono">ruff — 0 violations</span></li>
+            </ul>
+          </article>
+
+          <article class="card">
+            <div class="card-tag">C</div>
+            <h3>AI-assisted, human-directed</h3>
+            <p>This followed the "vibe coding" methodology of § 0.2 — the author orchestrated two Claude instances (one writing, one reviewing) across <strong>22 logged prompt sessions</strong>. Every significant prompt is reproduced verbatim in <span class="mono">docs/PROMPTS.md</span>.</p>
+            <p class="muted small">Token cost during development: ~290k input / ~200k output. The audit ran on the same workflow and caught real issues — see § Failed approaches.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ EXPERIMENTS ============ -->
+    <section class="section section-alt" id="experiments">
+      <div class="container">
+        <p class="section-num">04</p>
+        <h2>Five acts of an experiment</h2>
+        <p class="lead">A study isn't a single training run. Here is what actually happened, in order.</p>
+
+        <ol class="timeline">
+          <li class="t-item">
+            <div class="t-marker"><span>1</span></div>
+            <div class="t-card">
+              <header>
+                <span class="t-tag">EXP-001</span>
+                <h3>We ran the experiment exactly as specified. It failed.</h3>
+              </header>
+              <p>The PRD locked the phase-noise level at <span class="m">β = 2π</span>. At that setting, all three architectures collapsed to the trivial floor — predicting zero. <strong>MSE ≈ 0.50</strong> across the board, which equals the variance of a unit-amplitude sinusoid: the model has learned nothing and is outputting flat zero.</p>
+              <div class="floor-vis" aria-hidden="true">
+                <div class="floor-row"><span>FC</span><div class="bar bar-floor" style="--w:99%"></div><span class="mono">0.4985</span></div>
+                <div class="floor-row"><span>RNN</span><div class="bar bar-floor" style="--w:99%"></div><span class="mono">0.4992</span></div>
+                <div class="floor-row"><span>LSTM</span><div class="bar bar-floor" style="--w:99%"></div><span class="mono">0.4988</span></div>
+                <div class="floor-row floor-line"><span></span><div class="floor-target"></div><span class="mono muted">noise floor 0.50</span></div>
+              </div>
+              <p class="muted">Verdict: the locked configuration was unlearnable. Not a bug — a planning error. We needed to find a regime where the task is hard but solvable.</p>
+            </div>
+          </li>
+
+          <li class="t-item">
+            <div class="t-marker"><span>2</span></div>
+            <div class="t-card">
+              <header>
+                <span class="t-tag">EXP-002</span>
+                <h3>We searched for a regime where the task is hard but solvable.</h3>
+              </header>
+              <p>A β-sweep across six values from 0 to 2π (FC only, single seed) mapped the difficulty curve. The MSE walks monotonically up: <span class="mono">0.118 → 0.165 → 0.262 → 0.430 → 0.494 → 0.496</span>. There is a clear knee between <span class="m">π/4</span> and <span class="m">π/2</span>.</p>
+              <figure>
+                <img src="assets/fig1_beta_sweep.png" alt="FC test MSE plotted against phase-noise β. The curve rises monotonically from ~0.12 at β=0 to ~0.50 at β=2π, with a knee between π/4 and π/2. Vertical dashed line at β=π/4 marks the operating point chosen for EXP-003." loading="lazy" />
+                <figcaption>FIG-1 · β-sweep. The vertical dashed line is the operating point we picked for everything that followed.</figcaption>
+              </figure>
+              <p>We chose <strong>β = π/4</strong> as the operating point: MSE ≈ 0.262 (recovering ~48% of variance over the floor), task non-trivial but learnable.</p>
+            </div>
+          </li>
+
+          <li class="t-item">
+            <div class="t-marker"><span>3</span></div>
+            <div class="t-card">
+              <header>
+                <span class="t-tag">EXP-003</span>
+                <h3>We re-ran the comparison at the chosen regime.</h3>
+              </header>
+              <p>Three architectures, three seeds, β = π/4. The per-frequency MSE breakdown was the surprise of the project:</p>
+              <figure>
+                <img src="assets/fig2_per_freq_mse.png" alt="Grouped bar chart of per-frequency MSE for FC, RNN, LSTM at β=π/4 with ±1σ error bars across three seeds. Bars are highest at 2 Hz (~0.31) and lowest at 200 Hz (~0.17). All three architectures cluster within roughly one standard deviation at every frequency." loading="lazy" />
+                <figcaption>FIG-2 · per-frequency MSE. <strong>The difficulty profile is inverted</strong> — 200 Hz is easiest, 2 Hz is hardest. This is the opposite of what the lecturer's thesis predicts.</figcaption>
+              </figure>
+              <div class="callout callout-amber">
+                <div class="callout-tag">key finding</div>
+                <div>The thesis says LSTM should dominate at 2 Hz. Instead all three models do <em>worst</em> at 2 Hz, and the LSTM advantage over RNN at low frequencies is just <strong>+1.50% (2 Hz)</strong> and <strong>+0.81% (10 Hz)</strong> — far below our pre-registered 10% practical-significance threshold.</div>
+              </div>
+            </div>
+          </li>
+
+          <li class="t-item">
+            <div class="t-marker"><span>4</span></div>
+            <div class="t-card">
+              <header>
+                <span class="t-tag">Investigation</span>
+                <h3>Why is the profile inverted?</h3>
+              </header>
+              <p>The first hypothesis — "the 2 Hz target is near-constant within the window, so it can't be recovered" — was <strong>falsified by the audit</strong>. The window's start index ranges over ~20 full periods of the 2 Hz signal, so the target variance is uniform across all frequencies. Whatever the cause, it isn't <em>that</em>.</p>
+              <p>So we measured information directly. <span class="m">Var(W_clean | W_noisy)</span> — how much uncertainty about the clean target is left after seeing the noisy input?</p>
+              <div class="info-bars">
+                <div class="info-row">
+                  <span class="info-label">2 Hz</span>
+                  <div class="info-bar"><div class="info-fill" style="--p:23%"></div></div>
+                  <span class="mono info-num">23%</span>
+                  <span class="muted small">of target uncertainty resolved by the input</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">200 Hz</span>
+                  <div class="info-bar"><div class="info-fill" style="--p:44%"></div></div>
+                  <span class="mono info-num">44%</span>
+                  <span class="muted small">of target uncertainty resolved by the input</span>
+                </div>
+              </div>
+              <p>A 200 Hz sine completes <em>two full cycles</em> in a 10-sample window. The input is rich with phase information. A 2 Hz sine moves through 0.02 of a cycle in the same window — it's nearly featureless. The bottleneck isn't the architecture. It's the window.</p>
+              <figure>
+                <img src="assets/fig6_spectral_distinguishability.png" alt="Log-magnitude FFT of the noisy sum at corpus length, with peaks marked at 2, 10, 50 and 200 Hz. All four peaks rise to roughly the same prominence over the local floor (43-46x), showing all four frequencies are equally distinguishable at corpus scale. Window-scale FFT cannot resolve them." loading="lazy" />
+                <figcaption>FIG-6 · spectral evidence. At corpus length all four frequencies are equally prominent (43–46× over the local floor). At window length they're indistinguishable. The window is the bottleneck.</figcaption>
+              </figure>
+            </div>
+          </li>
+
+          <li class="t-item">
+            <div class="t-marker"><span>5</span></div>
+            <div class="t-card">
+              <header>
+                <span class="t-tag">EXP-008</span>
+                <h3>We controlled for parameter count.</h3>
+              </header>
+              <p>An LSTM-64 has ~3.6× the parameters of an RNN-64. Could the small LSTM advantage we saw be just a capacity effect? We re-ran with an RNN-128 (18,570 params, 98.6% of the LSTM).</p>
+              <figure>
+                <img src="assets/fig3_lstm_advantage.png" alt="Relative LSTM advantage at each frequency, plotted as percent improvement over RNN. Two lines: one for the original RNN-64 comparison (orange) and one for the parameter-matched RNN-128 (green). Both lines stay between roughly 0.8% and 2.5%, far below the dashed red 10% threshold line." loading="lazy" />
+                <figcaption>FIG-3 · LSTM relative advantage with and without parameter matching. The dashed red line is the 10% practical-significance threshold.</figcaption>
+              </figure>
+              <p>The LSTM still beat the RNN-128 — but only by <strong>+0.91% at 2 Hz</strong> to <strong>+2.15% at 200 Hz</strong>. The RNN-128 itself was no better than the RNN-64 (0.13σ difference). <strong>Capacity wasn't the binding constraint.</strong> The gating contributes a real but tiny effect.</p>
+            </div>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- ============ VERDICT ============ -->
+    <section class="section" id="verdict">
+      <div class="container">
+        <p class="section-num">05</p>
+        <h2>The verdict</h2>
+        <p class="lead">By the strict criteria we wrote down before running anything: refutation. By a longer look: something more interesting.</p>
+
+        <div class="verdict-grid">
+          <article class="verdict-card v-strict">
+            <div class="v-tag">strict criteria</div>
+            <h3>Outcome C — Refutation</h3>
+            <p>Pre-registered protocol (PRD § 8.4) requires both low-frequency cells to clear <strong>10%</strong> LSTM-vs-RNN improvement <em>and</em> a negative Spearman ρ.</p>
+            <ul class="kv">
+              <li><span>rel(2 Hz)</span><span class="mono">+1.50%</span></li>
+              <li><span>rel(10 Hz)</span><span class="mono">+0.81%</span></li>
+              <li><span>threshold</span><span class="mono">≥ 10%</span></li>
+              <li><span>Spearman ρ</span><span class="mono">+0.80 (predicted: negative)</span></li>
+            </ul>
+            <p class="muted small">Both magnitudes are far below threshold. The rank correlation has the wrong sign. By the letter of our protocol, the thesis is not confirmed.</p>
+          </article>
+
+          <article class="verdict-card v-deeper">
+            <div class="v-tag">what it actually means</div>
+            <h3>The configuration is untestable</h3>
+            <p>The lecturer's thesis predicts LSTM excels where long-range memory matters. Our configuration provides <em>neither</em>:</p>
+            <ul class="bullets">
+              <li>The window is 10 samples — there is no long range.</li>
+              <li>For low frequencies, the 10 samples don't contain enough phase information for any architecture to recover the target.</li>
+            </ul>
+            <p>The result is real. The result is precise. But it's a <strong>refutation of the experiment, not the theory</strong>.</p>
+            <p class="muted small">A genuine RNN-vs-LSTM frequency-bias test would need a longer window, or a different distinguishability measure. We propose those as follow-ups in the README.</p>
+            <p class="followup-note small"><span class="followup-marker">↳ personal follow-up</span> A GPU continuation tested the thesis at window=100, 500, and 2000 with bidirectional, multi-layer, seq-to-seq treatment. Result: <strong>partially supported</strong> — RNN wins on all-high-frequency sets; LSTM does <em>not</em> win on all-low-frequency sets; FC catastrophically collapses at window=2000. <a href="#followup">See § Beyond the submission ↓</a></p>
+          </article>
+        </div>
+
+        <div class="findings">
+          <h3>Three real findings</h3>
+          <div class="findings-grid">
+            <div class="finding"><div class="finding-num">1</div><p>The difficulty curve in <span class="m">β</span> has a measurable knee around <span class="m">π/4</span>; useful comparisons happen there.</p></div>
+            <div class="finding"><div class="finding-num">2</div><p>The inverted difficulty profile is explained by an information bottleneck in the input window, not by architecture.</p></div>
+            <div class="finding"><div class="finding-num">3</div><p>Capacity is not the binding constraint — a 3.6× larger RNN doesn't close the gap, but the gap was already tiny.</p></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ QUALITATIVE ============ -->
+    <section class="section section-alt" id="qualitative">
+      <div class="container">
+        <p class="section-num">06</p>
+        <h2>What the models actually output</h2>
+        <p class="lead">Numbers are persuasive, but pictures end the argument. One window per frequency, drawn from a held-out test split.</p>
+        <figure class="figure-wide">
+          <img src="assets/fig4_qualitative.png" alt="Grid of model predictions: rows are frequencies 2 Hz, 10 Hz, 50 Hz, 200 Hz; columns are FC, RNN, LSTM, and overlay. At 2 Hz the predictions are flat near zero while the clean target curves clearly. At 10 Hz the predictions are still mostly flat. At 50 Hz the shape is captured but amplitude compressed. At 200 Hz all three models track the clean target almost perfectly." loading="lazy" />
+          <figcaption>FIG-4 · qualitative reconstructions. Hover or tap a row for the annotation.</figcaption>
+        </figure>
+        <ul class="annotations">
+          <li><strong>2 Hz</strong> — Models output flat ≈ 0; clean target is ≈ −1. The information simply isn't in the input.</li>
+          <li><strong>10 Hz</strong> — Same story, slightly less severe. Predictions still hugging zero.</li>
+          <li><strong>50 Hz</strong> — Models capture the shape but compress the amplitude.</li>
+          <li><strong>200 Hz</strong> — All three lock onto the target. Visually it's hard to tell them apart.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ============ FAILED ============ -->
+    <section class="section" id="failed">
+      <div class="container">
+        <p class="section-num">07</p>
+        <h2>Failed and abandoned approaches</h2>
+        <p class="lead">A research notebook that hides its mistakes is fiction. Here is what we got wrong, what caught it, and what we did about it.</p>
+
+        <ul class="failed-list">
+          <li>
+            <div class="fl-icon" aria-hidden="true">⌬</div>
+            <div>
+              <h4>The original mechanistic hypothesis was wrong.</h4>
+              <p>"The 2 Hz target is near-constant within a 10-sample window" — sounds plausible, isn't true. <strong>Caught by the audit.</strong> Target variance is uniform across frequencies; the cause is information content, not target flatness.</p>
+            </div>
+          </li>
+          <li>
+            <div class="fl-icon" aria-hidden="true">⌬</div>
+            <div>
+              <h4>The PRD locked β = 2π as the operating point.</h4>
+              <p>It was a noise floor — the task is unlearnable there. <strong>Rescued by EXP-002</strong>, which sweeps β and finds the knee. The operating point is now data-derived rather than PRD-derived.</p>
+            </div>
+          </li>
+          <li>
+            <div class="fl-icon" aria-hidden="true">⌬</div>
+            <div>
+              <h4>Determinism was claimed but not enforced.</h4>
+              <p>Documents stated <code>torch.use_deterministic_algorithms(True)</code> was called. The audit found it was not. <strong>Fixed</strong> in <code>shared/seeding.py</code>; a new test (T-SD-04) prevents regression.</p>
+            </div>
+          </li>
+          <li>
+            <div class="fl-icon" aria-hidden="true">⌬</div>
+            <div>
+              <h4>The TODO file's LOC counts drifted.</h4>
+              <p>Cosmetic but real — manual claims diverged from AST-counted reality. <strong>Reconciled</strong> against actual measurements.</p>
+            </div>
+          </li>
+          <li>
+            <div class="fl-icon" aria-hidden="true">⌬</div>
+            <div>
+              <h4>The deepest planning error: assuming the task as written would test the thesis.</h4>
+              <p>It can't. A ten-sample window cannot distinguish the four frequencies — and that's the precondition for the thesis to be falsifiable. The whole experimental setup, written from the lecturer's brief, was downstream of an assumption nobody questioned at planning time. We questioned it after the data came in.</p>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ============ FOLLOW-UP (personal, post-submission) ============ -->
+    <section class="section followup-section" id="followup">
+      <div class="container">
+        <div class="followup-badge">PERSONAL FOLLOW-UP · POST-SUBMISSION</div>
+        <p class="section-num">7½</p>
+        <h2>Beyond the submission — personal follow-up experiments</h2>
+        <p class="lead">What we found when we kept investigating.</p>
+
+        <p>After submitting v1.00 of the project, we kept asking the same question that the locked window=10 configuration could not answer: what happens when architectures get a fair fight? We ran a GPU follow-up with bidirectional 2-layer recurrents, sequence-to-sequence heads, layer normalization, equal datasets, and no early stopping — across windows 10, 100, 500, and 2000. The results changed our interpretation in three concrete ways. None of this is part of the submitted project; it is a personal continuation.</p>
+
+        <p class="muted small">Hardware: NVIDIA GeForce GTX 1070 (CC 6.1) · PyTorch 2.5.1+cu118 · 69 training runs · 95 minutes wall-clock · 3 seeds per configuration.</p>
+
+        <div class="followup-cards">
+
+          <article class="followup-card">
+            <div class="fc-num">1</div>
+            <h3>FC dominance was an artifact</h3>
+            <p>The original CPU sandbox showed FC winning by ~50× at long windows. With fair architectural treatment, FC and LSTM are <strong>statistically tied</strong> at moderate windows. At window=2000, FC <strong>catastrophically collapses</strong> — its parameter-matched width has to fall to ~12 hidden units to keep the budget at ~50k params with input dim 2004 + output dim 2000.</p>
+
+            <figure class="figure-wide">
+              <img src="assets/fig7_window_sweep.png" alt="Line chart of overall test MSE versus window size on log-log axes. FC follows a U-shape that bottoms out near window=500 then explodes upward at window=2000 to about 0.18. RNN-bi and LSTM-bi monotonically decrease from window=10 to window=2000, both staying near 0.002–0.004 across the wider windows. An annotation labels FC's blow-up at window=2000 as 'FC capacity collapse'." loading="lazy" />
+              <figcaption>FIG-7 · Overall test MSE across window sizes. 3 seeds, mean ± std.</figcaption>
+            </figure>
+
+            <div class="followup-table-wrap">
+              <table class="followup-table">
+                <thead>
+                  <tr><th>Window</th><th>FC</th><th>RNN-bi</th><th>LSTM-bi</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>10</td><td>0.027</td><td>0.035</td><td>0.041</td></tr>
+                  <tr><td>100</td><td>0.0032</td><td>0.0042</td><td>0.0031</td></tr>
+                  <tr><td>500</td><td>0.0019</td><td>0.0038</td><td>0.0017</td></tr>
+                  <tr class="row-emphasis"><td>2000</td><td><strong>0.181</strong></td><td>0.0025</td><td>0.0032</td></tr>
+                </tbody>
+              </table>
+              <p class="muted small">Overall test MSE, mean ± std across 3 seeds. FC's window=2000 result is structural — its capacity collapsed because parameter-matching pushed the width down to ~12 hidden units.</p>
+            </div>
+          </article>
+
+          <article class="followup-card">
+            <div class="fc-num">2</div>
+            <h3>Architecture winner depends on window — non-monotonically</h3>
+            <p>The clean "LSTM dominates as context grows" prediction is wrong. LSTM wins <strong>only in the middle band</strong> (window=100–500). At very short windows (w=10) LSTM is over-parameterised for a 10-sample local-denoising task. At very long windows (w=2000) bidirectional RNN already has enough effective context — the LSTM gates do not compound into a win.</p>
+          </article>
+
+          <article class="followup-card">
+            <div class="fc-num">3</div>
+            <h3>Bidirectionality is a free 60–80% MSE reduction</h3>
+            <p>At window=500: RNN goes from 0.0100 (uni) to 0.0038 (bi), a <strong>62% drop</strong>. LSTM goes from 0.0085 to 0.0017, an <strong>80% drop</strong>. The denoising task is symmetric in time, so the causal constraint of unidirectional models is purely wasted capacity.</p>
+            <p class="muted small">The original submission used unidirectional models per <span class="mono">PRD_models § 13</span> — a deliberate but conservative choice that this follow-up shows costs real performance.</p>
+          </article>
+
+          <article class="followup-card">
+            <div class="fc-num">4</div>
+            <h3>The thesis is partially supported, asymmetrically</h3>
+
+            <div class="followup-table-wrap">
+              <table class="followup-table">
+                <thead>
+                  <tr><th>Frequency set</th><th>Predicted winner</th><th>Actual winner</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>Low only [2, 5, 10, 20 Hz]</td><td>LSTM</td><td><strong>FC</strong> <span class="muted small">(LSTM second; RNN failed)</span></td></tr>
+                  <tr><td>High only [100, 200, 350, 450 Hz]</td><td>RNN</td><td><strong>RNN</strong> ✓</td></tr>
+                  <tr><td>Wide [2, 50, 200, 450 Hz]</td><td>mixed</td><td>LSTM-bi</td></tr>
+                  <tr><td>Near Nyquist [350, 400, 450, 480 Hz]</td><td>RNN</td><td>FC</td></tr>
+                </tbody>
+              </table>
+              <p class="muted small">RNN's affinity for high frequencies is reproducible. LSTM's affinity for low frequencies is <em>not</em> — pure low-frequency signals are best handled by FC.</p>
+            </div>
+          </article>
+
+        </div>
+
+        <p class="followup-closing">The lecturer's thesis was a useful starting heuristic — partially correct on the high-frequency end, wrong on the low-frequency end, and silent on a real phenomenon (FC capacity collapse at long contexts). The original submission's verdict (Refutation in strict sense at window=10) is unaffected and arguably strengthened: window=10 was simply one point in a non-monotonic regime where no architecture has a clean dominant story. Doing the experiment carefully, with fair architectural treatment, gives us a more textured answer than either the original brief or our submitted analysis predicted.</p>
+      </div>
+    </section>
+
+    <!-- ============ HEBREW SUMMARY ============ -->
+    <section class="section section-alt" id="hebrew" lang="he" dir="rtl">
+      <div class="container hebrew-section">
+        <p class="section-num" dir="ltr">08</p>
+        <h2>סיכום מקיף בעברית</h2>
+        <p class="hebrew-subtitle muted small" dir="ltr">Comprehensive summary in Hebrew — for Hebrew-speaking readers</p>
+
+        <div class="hebrew-body">
+          <section>
+            <h3>1. <strong>המשימה</strong></h3>
+            <p>התרגיל המקורי של המרצה: ארבעה סינוסים בתדרים שונים, חלון של 10 דגימות, וחילוץ סינוס נקי בודד מתוך תערובת רועשת לפי וקטור one-hot. הקלט שהמודל רואה הוא 10 דגימות מתוך הסכום הרועש בלבד, יחד עם וקטור הבחירה. המוצא הוא חלון של 10 דגימות נקיות של הסינוס שנבחר.</p>
+          </section>
+
+          <section>
+            <h3>2. <strong>המתודולוגיה</strong></h3>
+            <p>מסמכים לפני קוד — 11 ADRs, 4 PRDs ייעודיים, ו-PRD ראשי, נכתבו ואושרו לפני שורת פייתון אחת. פיתוח מונחה בדיקות (TDD) מלא: 144 בדיקות, כיסוי 100%, אפס הפרות ב-ruff. הפיתוח עצמו נעשה לפי § 0.2 של מסמך ההנחיות — vibe coding מונחה אדם, עם רישום מלא של כל ה-prompts.</p>
+          </section>
+
+          <section>
+            <h3>3. <strong>התגלית הראשונה</strong></h3>
+            <p>בקונפיגורציה הנעולה במפרט (β = 2π), כל שלוש הארכיטקטורות קורסות לקרקעית הרעש (MSE ≈ 0.50). המשמעות: המודל לומד לחזות אפס. המשימה אינה ניתנת לפתרון בנקודה הזו. הצעד הראשון של הפרויקט היה להבין שהקונפיגורציה הראשונית פגומה מבחינה מדעית — לא באג בקוד, אלא טעות בתכנון.</p>
+          </section>
+
+          <section>
+            <h3>4. <strong>חיפוש הרגיון הניתן לפתרון</strong></h3>
+            <p>סקירת β בין 0 ל-2π (EXP-002) מצאה את ה-knee — <strong>נקודת המפנה</strong> — בין π/4 ל-π/2. בחרנו β = π/4 כנקודת עבודה, לפי קריטריון פרה-רגיסטר שדרש <span dir="ltr" class="mono">FC MSE ≤ 0.30</span>. זו לא חריגה מהמפרט: β לא ננעל במפורש, רק ההגדרה הסטטיסטית שלו.</p>
+          </section>
+
+          <section>
+            <h3>5. <strong>התוצאה המרכזית</strong></h3>
+            <p>בנקודת העבודה החדשה, פרופיל הקושי הפוך מהתחזית של המרצה: 200 הרץ הוא הקל ביותר, 2 הרץ הוא הקשה ביותר. ההבדלים בין הארכיטקטורות בכל תא בודד מתחת לסף המשמעותי הפרקטי של 10% שנקבע מראש. בקצרה — אין הבדל מעשי בין FC, RNN ו-LSTM בקונפיגורציה הזו.</p>
+            <p class="hebrew-followup-note small"><span class="followup-marker" dir="ltr">↳ personal follow-up</span> במחקר המשך אישי לאחר ההגשה, בדקנו עם <span class="mono" dir="ltr">window=100, 500, 2000</span> וטיפול ארכיטקטוני הוגן (<span dir="ltr">bidirectional, multi-layer, seq-to-seq head</span>). פרופיל הקושי מורכב יותר ממה שהתזה חוזה — LSTM מנצח רק ב-window בינוני (100–500), RNN מנצח על תדרים גבוהים, FC מנצח על קבוצות תדרים נמוכים בלבד.</p>
+          </section>
+
+          <section>
+            <h3>6. <strong>המנגנון</strong></h3>
+            <p>מדידה ישירה של <strong>השונות המותנית</strong> <span dir="ltr" class="mono">Var(W_clean | W_noisy)</span> הראתה שב-2 הרץ החלון של 10 דגימות פשוט אינו מכיל מספיק מידע על המטרה. הצוואר בקבוק הוא תוכן המידע בקלט, לא הקיבולת של הארכיטקטורה. EXP-008 (RNN בפרמטרים תואמים, h=128) אישר זאת — הכפלת מספר הפרמטרים של ה-RNN לא הזיזה את ה-MSE באופן משמעותי.</p>
+          </section>
+
+          <section>
+            <h3>7. <strong>הפסק הסופי</strong></h3>
+            <p>לפי הקריטריונים שנקבעו מראש, זו Outcome C — <strong>הפרכה</strong>. אבל ההפרכה רדודה: הקונפיגורציה כפי שנכתבה אינה מסוגלת לבחון את התזה. המטרה הזו לא ניתנת לבדיקה כאן, לא שהיא שגויה באופן כללי. עבור חלון בגודל 500 דגימות לפחות, התחזית של המרצה תחזור להיות בת-בדיקה — סעיף 6 ב-README מציע פרוטוקול ההמשך.</p>
+            <p class="hebrew-followup-note small"><span class="followup-marker" dir="ltr">↳ personal follow-up</span> המחקר הנוסף (סנדבוקס GPU) מאשר שהתזה מתקיימת חלקית: <span dir="ltr">RNN ↔</span> תדרים גבוהים נכון; <span dir="ltr">LSTM ↔</span> תדרים נמוכים לא מתאשר אמפירית. הגרסה הפדגוגית הנקייה של התזה כפי שהוצגה בכיתה היא הפשטה — האמת היא תלוית-window ותלוית-הרכב-תדרים.</p>
+          </section>
+
+          <section>
+            <h3>8. <strong>טעויות שהודינו בהן</strong></h3>
+            <p>ההשערה הראשונית למנגנון נמצאה שגויה במהלך <strong>סקירה עצמית</strong>. 53 בדיקות אודיט, 3 חוסמי-בלוקר תוקנו לפני ההגשה. רשימה מלאה ב-§ 7 ב-README. אין במסמך הזה ניסיון להחליק על שגיאות שנעשו — להפך, הרישום שלהן הוא חלק מהתוצר.</p>
+          </section>
+
+          <section>
+            <h3>9. <strong>למה כדאי לקחת את העבודה הזו ברצינות</strong></h3>
+            <p>ארבעה דברים. (א) הצגנו פרוטוקול פרה-רגיסטר ועמדנו בו גם כשנתן הפרכה. (ב) הסקירה העצמית מצאה ותיקנה באגים אמיתיים לפני ההגשה. (ג) ה-B-investigation היא מדידה אינפורמציוני-תיאורטית אמיתית של תוכן המידע בחלון, לא ניחוש פוסט-הוק. (ד) בנוסף לעבודה הרשמית, ביצענו ניסויי המשך אישיים על GPU שאימתו והעמיקו את המסקנות — הוכחה שהמחבר ממשיך לחקור אחרי ההגשה.</p>
+          </section>
+
+          <section>
+            <h3>10. <strong>למה אולי כדאי להיזהר</strong></h3>
+            <p>המעבדה רצה פעם אחת. שלושה seeds זה מינימום מקובל אך לא נדיב. 53% חפיפה ב-(t₀, k) בין train/test היא מודעת ומותרת ע"י ADR-016 על בסיס סטציונריות, אבל בודק שיסקור במהירות עלול לסמן את זה. הקוד נכתב כמעט לחלוטין באמצעות AI agents בהנחיית המחבר — מה שמתאים לסעיף 0.2 בהנחיות, אך דורש קריאה ביקורתית.</p>
+          </section>
+
+          <section>
+            <h3>11. <strong>שורה תחתונה</strong></h3>
+            <p>הפרויקט הוא הפרכה כנה של תזה, עם הסבר נמדד לתופעה, עם תחזית הניתנת לאימות בהגדרות חלון רחב יותר, ועם פרוטוקול הנדסי מלא לפי כל הסעיפים של מסמך ההנחיות. אם המרצה מחפש confirmation pretty result — זה לא מה שיקבל. אם הוא מחפש analysis honest, מתודולוגיה משוכפלת, ויכולת להגן על כל החלטה — זה כן.</p>
+          </section>
+
+          <section class="hebrew-glossary">
+            <h3>מילון מונחים</h3>
+            <ul>
+              <li><strong>ארכיטקטורה</strong> · architecture</li>
+              <li><strong>הפרכה</strong> · refutation</li>
+              <li><strong>סקירה עצמית</strong> · audit / self-audit</li>
+              <li><strong>נקודת המפנה</strong> · knee</li>
+              <li><strong>שונות מותנית</strong> · conditional variance</li>
+              <li><strong>פרה-רגיסטר</strong> · pre-registration (committing to the analysis plan before seeing the data)</li>
+              <li><strong>קרקעית הרעש</strong> · noise floor</li>
+            </ul>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ STACK ============ -->
+    <section class="section" id="stack">
+      <div class="container">
+        <p class="section-num">09</p>
+        <h2>Built with</h2>
+        <div class="stack-grid">
+          <div class="stack-item"><strong>Python 3.12</strong><span>language</span></div>
+          <div class="stack-item"><strong>PyTorch</strong><span>tensors, autograd, training loops</span></div>
+          <div class="stack-item"><strong>NumPy</strong><span>signal generation</span></div>
+          <div class="stack-item"><strong>Matplotlib</strong><span>all six figures</span></div>
+          <div class="stack-item"><strong>pytest</strong><span>144 tests · 100% coverage</span></div>
+          <div class="stack-item"><strong>ruff</strong><span>0 violations</span></div>
+          <div class="stack-item"><strong>uv</strong><span>package + task runner</span></div>
+          <div class="stack-item"><strong>Jupyter</strong><span>results notebook</span></div>
+          <div class="stack-item"><strong>GitHub</strong><span>history, audit, releases</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ EXPLORE ============ -->
+    <section class="section section-alt" id="explore">
+      <div class="container">
+        <p class="section-num">10</p>
+        <h2>Go deeper</h2>
+        <p class="lead">The website is the soft entry point. Everything technical is in the repository.</p>
+        <div class="explore-grid">
+          <a class="explore-card" href="https://github.com/ilyalaz01/signal-extraction-rnn-lstm/blob/master/README.md">
+            <div class="explore-tag">698 lines</div>
+            <h3>Read the full README</h3>
+            <p>The formal research narrative. Every number on this page is sourced there with citations.</p>
+            <span class="arrow">→</span>
+          </a>
+          <a class="explore-card" href="https://github.com/ilyalaz01/signal-extraction-rnn-lstm/tree/master/docs">
+            <div class="explore-tag">7 PRDs · 12 ADRs</div>
+            <h3>Browse the documents</h3>
+            <p>The pre-code specification: PRDs per algorithm, decision records, the 5 experiment logs, and the audit.</p>
+            <span class="arrow">→</span>
+          </a>
+          <a class="explore-card" href="https://github.com/ilyalaz01/signal-extraction-rnn-lstm">
+            <div class="explore-tag">v1.00</div>
+            <h3>View the source</h3>
+            <p>The repository: <code>src/</code>, <code>tests/</code>, configs, results JSON, and the notebook that produced every figure.</p>
+            <span class="arrow">→</span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-row">
+        <div>
+          <p>Built by <strong>Ilya Lazarev</strong> and <strong>Nadav Goldin</strong> (נדב גולדין) for a course taught by <strong>Dr. Yoram Segal</strong>.</p>
+          <p class="muted small">
+            <a href="mailto:ilyalaz01@gmail.com">ilyalaz01@gmail.com</a>
+            &nbsp;·&nbsp;
+            <a href="mailto:ndvp39@gmail.com">ndvp39@gmail.com</a>
+          </p>
+          <p class="muted small">AI-assisted development per § 0.2 of the project guidelines. All prompts logged.</p>
+        </div>
+        <div class="footer-meta">
+          <a href="https://github.com/ilyalaz01/signal-extraction-rnn-lstm">source on github →</a>
+          <span class="version">v1.00</span>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
